@@ -1,103 +1,223 @@
-#define ZMK_POINTING_DEFAULT_SCRL_VAL 80
-
 #include <behaviors.dtsi>
 #include <dt-bindings/zmk/bt.h>
 #include <dt-bindings/zmk/keys.h>
+#include <dt-bindings/zmk/outputs.h>
 #include <dt-bindings/zmk/pointing.h>
 
-#define MOUSE 4
-#define SCROLL 5
-#define NUM 6
-
 &mt {
+    quick-tap-ms = <150>;
+    tapping-term-ms = <150>;
     flavor = "balanced";
-    quick-tap-ms = <0>;
+};
+
+&lt {
+    tapping-term-ms = <150>;
+    quick-tap-ms = <150>;
+    flavor = "balanced";
 };
 
 / {
     combos { compatible = "zmk,combos"; };
 
+    macros {
+        macro_vim_dd: macro_delete_line {
+            compatible = "zmk,behavior-macro";
+            #binding-cells = <0>;
+            bindings =
+                <&kp HOME>,
+                <&macro_wait_time 100>,
+                <&kp LS(END)>,
+                <&macro_wait_time 100>,
+                <&kp LC(X)>;
+
+            label = "MACRO_DELETE_LINE";
+        };
+
+        macro_vim_yy: macro_yank_line {
+            compatible = "zmk,behavior-macro";
+            #binding-cells = <0>;
+            bindings =
+                <&kp HOME>,
+                <&macro_wait_time 100>,
+                <&kp LS(END)>,
+                <&macro_wait_time 100>,
+                <&kp LC(C)>;
+
+            label = "MACRO_YANK_LINE";
+        };
+
+        macro_vim_shift_d: macro_vim_shift_d {
+            compatible = "zmk,behavior-macro";
+            #binding-cells = <0>;
+            bindings = <&kp LS(END)>, <&macro_wait_time 100>, <&kp LC(X)>;
+
+            label = "MACRO_VIM_SHIFT_D";
+        };
+
+        macro_vim_o: macro_vim_o {
+            compatible = "zmk,behavior-macro";
+            #binding-cells = <0>;
+            bindings = <&kp END>, <&macro_wait_time 100>, <&kp ENTER>;
+
+            label = "MACRO_VIM_O";
+        };
+
+        macro_vim_shift_o: macro_vim_shift_o {
+            compatible = "zmk,behavior-macro";
+            #binding-cells = <0>;
+            bindings =
+                <&kp HOME>,
+                <&macro_wait_time 100>,
+                <&kp ENTER>,
+                <&macro_wait_time 100>,
+                <&kp UP_ARROW>;
+
+            label = "MACRO_VIM_SHIFT_O";
+        };
+    };
+
     behaviors {
+        td_vim_d: td_vim_d {
+            compatible = "zmk,behavior-tap-dance";
+            label = "TD_VIM_D";
+            #binding-cells = <0>;
+            bindings = <&kp LC(X)>, <&macro_vim_dd>;
+        };
+
+        mm_vim_shift_d: mm_vim_shift_d {
+            compatible = "zmk,behavior-mod-morph";
+            label = "MM_VIM_SHIFT_D";
+            bindings = <&td_vim_d>, <&macro_vim_shift_d>;
+
+            #binding-cells = <0>;
+            mods = <(MOD_LSFT|MOD_RSFT)>;
+        };
+
+        td_vim_y: td_vim_y {
+            compatible = "zmk,behavior-tap-dance";
+            label = "TD_VIM_Y";
+            #binding-cells = <0>;
+            bindings = <&kp LC(C)>, <&macro_vim_yy>;
+        };
+
+        mm_vim_ctrl_u: mm_vim_ctrl_u {
+            compatible = "zmk,behavior-mod-morph";
+            label = "MM_VIM_CTRL_U";
+            bindings = <&kp LC(Z)>, <&kp PAGE_UP>;
+
+            #binding-cells = <0>;
+            mods = <(MOD_LCTL|MOD_RCTL)>;
+        };
+
+        mm_vim_shift_o: mm_vim_shift_o {
+            compatible = "zmk,behavior-mod-morph";
+            label = "MM_VIM_SHIFT_O";
+            bindings = <&macro_vim_o>, <&macro_vim_shift_o>;
+
+            #binding-cells = <0>;
+            mods = <(MOD_LSFT|MOD_RSFT)>;
+        };
+
+        mm_vim_ctrl_then_shift_d: mm_vim_ctrl_then_shift_d {
+            compatible = "zmk,behavior-mod-morph";
+            label = "MM_VIM_CTRL_THEN_SHIFT_D";
+            bindings = <&mm_vim_shift_d>, <&kp PAGE_DOWN>;
+
+            #binding-cells = <0>;
+            mods = <(MOD_LCTL|MOD_RCTL)>;
+        };
+
+        mm_vim_shift_4: mm_vim_shift_4 {
+            compatible = "zmk,behavior-mod-morph";
+            label = "MM_VIM_SHIFT_4";
+            bindings = <&none>, <&kp END>;
+
+            #binding-cells = <0>;
+            mods = <(MOD_LSFT|MOD_RSFT)>;
+        };
+
+        mm_vim_ctrl_r: mm_vim_ctrl_r {
+            compatible = "zmk,behavior-mod-morph";
+            label = "MM_VIM_CTRL_R";
+            bindings = <&none>, <&kp LC(Y)>;
+
+            #binding-cells = <0>;
+            mods = <(MOD_LCTL|MOD_RCTL)>;
+        };
     };
 
     keymap {
         compatible = "zmk,keymap";
 
-        default_layer {
+        DEFAULT {
             bindings = <
-&kp Q             &kp W         &kp E         &kp R  &kp T                                           &kp Y        &kp U  &kp I      &kp O    &kp P
-&kp A             &kp S         &kp D         &kp F  &kp G        &mkp MCLK           &mo 1          &kp H        &kp J  &kp K      &kp L    &mt RIGHT_SHIFT SQT
-&mt LEFT_SHIFT Z  &kp X         &kp C         &kp V  &kp B        &kp TAB             &kp DEL        &kp N        &kp M  &kp COMMA  &kp DOT  &kp SLASH
-&kp LCTRL         &kp LEFT_ALT  &kp LEFT_WIN  &mo 2  &lt 2 SPACE  &tapdance_kana      &kp BACKSPACE  &lt 3 ENTER                             &kp LS(LG(S))
-            >;
-
-            sensor-bindings = <&WheelScroll SCRL_DOWN SCRL_UP>;
-        };
-
-        FUNCTION {
-            bindings = <
-&trans  &trans  &trans  &trans  &trans                      &trans  &kp F7  &kp F8  &kp F9  &kp F12
-&trans  &trans  &trans  &trans  &trans  &trans      &trans  &trans  &kp F4  &kp F5  &kp F6  &kp F11
-&trans  &trans  &trans  &trans  &trans  &mo 6       &trans  &trans  &kp F1  &kp F2  &kp F3  &kp F10
-&trans  &trans  &trans  &trans  &trans  &mo 1       &trans  &trans                          &kp ESCAPE
-            >;
-
-            sensor-bindings = <&inc_dec_kp C_VOLUME_DOWN C_VOLUME_UP>;
-        };
-
-        NUM {
-            bindings = <
-&kp LS(INTERNATIONAL_1)  &kp LEFT_ALT     &kp ASTERISK      &kp LEFT_PARENTHESIS  &mkp MCLK                             &kp TAB       &kp KP_NUMBER_7  &kp KP_NUMBER_8  &kp KP_NUMBER_9  &kp KP_MINUS
-&kp MINUS                &kp UNDERSCORE   &mo 5             &mkp LCLK             &mkp RCLK  &trans         &trans      &kp KP_SLASH  &kp KP_NUMBER_4  &kp KP_NUMBER_5  &kp KP_NUMBER_6  &mt RIGHT_SHIFT SINGLE_QUOTE
-&mt LEFT_SHIFT KP_PLUS   &kp KP_ASTERISK  &kp LEFT_BRACKET  &kp LC(V)             &kp LC(C)  &kp LC(Z)      &kp DELETE  &kp KP_N0     &kp KP_NUMBER_1  &kp KP_NUMBER_2  &kp KP_NUMBER_3  &kp KP_DOT
-&trans                   &trans           &trans            &trans                &trans     &trans         &trans      &trans                                                           &kp KP_NUMLOCK
+&kp Q               &kp W        &kp E                      &kp R         &kp T         &kp Y       &kp U          &kp I        &kp O                  &kp P
+&mt LEFT_CONTROL A  &kp S        &kp D                      &kp F         &kp G         &none       &none          &kp H        &kp J                  &kp K        &kp L    &mt RCTRL MINUS
+&mt LEFT_SHIFT Z    &kp X        &kp C                      &kp V         &kp B         &sys_reset  &sys_reset     &kp N        &kp M                  &kp COMMA    &kp PERIOD  &mt RIGHT_SHIFT SLASH
+&mo 7               &mo 6        &kp LEFT_WIN               &kp LEFT_ALT  &lt 2 SPACE  &mo 1       &mo 2          &lt 1 ENTER  &mo 7
             >;
         };
 
-        ARROW {
+        SYMBOL {
             bindings = <
-&kp AMPERSAND        &kp AT_SIGN       &kp RIGHT_BRACKET  &kp BACKSLASH  &kp LS(INTERNATIONAL_3)                                 &kp UNDER      &kp LC(KP_PLUS)  &kp ASTERISK    &kp LEFT_PARENTHESIS  &kp PLUS
-&kp MINUS            &kp LEFT_BRACKET  &kp EXCLAMATION    &kp QUESTION   &kp INT_YEN               &trans                &to 4   &kp PAGE_UP    &kp LC(MINUS)    &kp UP_ARROW    &kp CARET             &trans
-&mt LEFT_SHIFT HASH  &kp PERCENT       &kp SINGLE_QUOTE   &kp SEMICOLON  &kp EQUAL                 &trans                &trans  &kp PAGE_DOWN  &kp LEFT_ARROW   &kp DOWN_ARROW  &kp RIGHT_ARROW       &kp LS(INTERNATIONAL_1)
-&trans               &trans            &trans             &trans         &mt LEFT_SHIFT LS(SPACE)  &lt 1 LANGUAGE_2      &trans  &trans                                                                &trans
+&kp N1                 &kp N2     &kp N3            &kp N4             &kp N5      &kp N6          &kp N7         &kp N8            &kp N9         &kp N0
+&mt LCTRL TAB          &kp GRAVE  &kp LEFT_BRACKET  &kp RIGHT_BRACKET  &kp DELETE  &none           &none          &kp BACKSPACE  &kp SEMICOLON  &kp SINGLE_QUOTE  &kp BACKSLASH  &trans
+&mt LEFT_SHIFT ESCAPE  &none      &none             &none              &none       &none           &none          &none          &kp EQUAL      &trans            &trans         &trans
+&none                  &trans     &trans            &trans             &mo 3       &none           &mo 3          &none          &none
             >;
+        };
 
-            sensor-bindings = <&inc_dec_kp LC(KP_MINUS) LC(KP_PLUS)>;
+        VIM_NORMAL_1 {
+            bindings = <
+&none           &kp LC(RIGHT)  &kp LC(RIGHT)              &mm_vim_ctrl_r  &none         &td_vim_y  &mm_vim_ctrl_u  &none      &mm_vim_shift_o       &kp LC(V)
+&kp LCTRL       &none          &mm_vim_ctrl_then_shift_d  &none           &none         &none      &none           &kp LEFT   &kp DOWN              &kp UP_ARROW  &kp RIGHT  &kp RCTRL
+&kp LEFT_SHIFT  &kp DELETE     &none                      &none           &kp LC(LEFT)  &none      &none           &none      &none                 &none         &none      &mt RIGHT_SHIFT LC(F)
+&none           &trans         &trans                     &trans          &none         &mo 3      &none           &mo 3      &none
+            >;
+        };
+
+        VIM_NORMAL_2 {
+            bindings = <
+&none           &none   &none   &mm_vim_shift_4  &none  &none  &none  &none  &none  &kp HOME
+&kp LCTRL       &none   &none   &none            &none  &none  &none  &none  &none  &none     &none  &kp RCTRL
+&kp LEFT_SHIFT  &none   &none   &none            &none  &none  &none  &none  &none  &none     &none  &kp RIGHT_SHIFT
+&none           &trans  &trans  &trans           &none  &none  &none  &none  &none
+            >;
         };
 
         MOUSE {
             bindings = <
-&trans  &trans  &trans  &trans  &trans                      &trans  &trans    &trans  &trans    &trans
-&trans  &trans  &trans  &trans  &trans  &trans      &to 0   &trans  &mkp MB1  &mo 5   &mkp MB2  &mkp MB3
-&trans  &trans  &trans  &trans  &trans  &trans      &trans  &trans  &trans    &trans  &trans    &trans
-&trans  &trans  &trans  &trans  &trans  &trans      &trans  &trans                              &bootloader
+&none  &none  &none  &none  &none  &none  &none  &none  &none  &none
+&none  &none  &none  &none  &none  &none  &none  &none  &none  &mo 5  &none  &none
+&none  &none  &none  &none  &none  &none  &none  &none  &none  &none  &none  &none
+&none  &none  &none  &none  &none  &none  &none  &none  &none
             >;
         };
 
         SCROLL {
             bindings = <
-&trans  &trans  &trans  &trans  &trans                      &trans  &trans  &trans  &trans  &trans
-&trans  &trans  &trans  &trans  &trans  &trans      &trans  &trans  &trans  &trans  &trans  &trans
-&trans  &trans  &trans  &trans  &trans  &trans      &trans  &trans  &trans  &trans  &trans  &trans
-&trans  &trans  &trans  &trans  &trans  &trans      &trans  &trans                          &trans
+&none  &none  &none  &none  &none  &none     &none  &none     &none  &none
+&none  &none  &none  &none  &none  &none     &none  &none     &none  &none     &none  &none
+&none  &none  &none  &none  &none  &none     &none  &none     &mkp MB1  &none  &mkp MB2  &none
+&none  &none  &none  &none  &none  &none     &none  &none     &none
             >;
         };
 
-        BT {
+        FUNCTION {
             bindings = <
-&trans       &trans        &trans        &trans        &trans                           &bt BT_SEL 0  &bt BT_SEL 1  &bt BT_SEL 2  &bt BT_SEL 3  &bt BT_SEL 4
-&trans       &trans        &trans        &trans        &trans  &trans      &sys_reset   &trans        &trans        &trans        &trans        &trans
-&trans       &kp NUMBER_1  &kp NUMBER_2  &kp NUMBER_3  &trans  &trans      &bootloader  &trans        &trans        &trans        &trans        &bt BT_CLR
-&bootloader  &sys_reset    &trans        &trans        &trans  &trans      &trans       &trans                                                  &bt BT_CLR_ALL
+&kp F1  &kp F2      &kp F3  &kp F4  &kp F5  &kp F6       &kp F7  &kp F8  &kp F9      &kp F10
+&none   &sys_reset  &none   &none   &none   &none        &none   &none   &none       &none   &sys_reset  &none
+&none   &none       &none   &none   &bootloader  &none  &none   &bootloader  &none  &none  &none  &none
+&none   &none       &none   &none   &none   &none        &none   &none        &none
             >;
         };
 
-        layer_7 {
+        BLUETOOTH {
             bindings = <
-&trans  &trans  &trans  &trans  &trans                      &trans  &trans  &trans  &trans  &trans
-&trans  &trans  &trans  &trans  &trans  &trans      &trans  &trans  &trans  &trans  &trans  &trans
-&trans  &trans  &trans  &trans  &trans  &trans      &trans  &trans  &trans  &trans  &trans  &trans
-&trans  &trans  &trans  &trans  &trans  &trans      &trans  &trans                          &trans
+&bt BT_SEL 0    &bt BT_SEL 1  &bt BT_SEL 2  &bt BT_SEL 3  &bt BT_SEL 4  &none  &out OUT_USB  &none  &none  &none
+&bt BT_CLR_ALL  &none         &none         &none         &none         &none  &none         &none  &none  &none  &none  &none
+&none           &none         &bt BT_CLR    &none         &out OUT_BLE  &none  &none         &none  &none  &none  &none  &none
+&none           &none         &none         &none         &none         &none  &none         &none  &none
             >;
         };
     };
