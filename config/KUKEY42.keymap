@@ -18,23 +18,6 @@
     combos { compatible = "zmk,combos"; };
 
     behaviors {
-        tapdance_kana: tapdance_kana {
-            compatible = "zmk,behavior-tap-dance";
-            label = "TAPDANCE_KANA";
-            #binding-cells = <0>;
-            bindings = <&kp INT2>, <&kp LANGUAGE_2>, <&sl 1>;
-
-            tapping-term-ms = <400>;
-        };
-
-        WheelScroll: WheelScroll {
-            compatible = "zmk,behavior-sensor-rotate-var";
-            label = "WHEELSCROLL";
-            #sensor-binding-cells = <2>;
-            bindings = <&msc>, <&msc>;
-
-            tap-ms = <20>;
-        };
     };
 
     keymap {
