@@ -1,3 +1,4 @@
+#include <input/processors.dtsi>
 #include <behaviors.dtsi>
 #include <dt-bindings/zmk/bt.h>
 #include <dt-bindings/zmk/keys.h>
@@ -15,6 +16,16 @@
     quick-tap-ms = <150>;
     flavor = "balanced";
 };
+
+&zip_temp_layer {
+    excluded-positions = <
+        19 // K
+    >;
+
+    require-prior-idle-ms = <200>;
+};
+
+&mkp_input_listener { input-processors = <&zip_temp_layer 4 10000>; };
 
 / {
     combos { compatible = "zmk,combos"; };
