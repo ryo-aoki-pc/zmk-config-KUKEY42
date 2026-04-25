@@ -162,28 +162,28 @@
 
         DEFAULT {
             bindings = <
-&kp Q               &kp W  &kp E         &kp R         &kp T                                    &kp Y        &kp U  &kp I      &kp O       &kp P
-&mt LEFT_CONTROL A  &kp S  &kp D         &kp F         &kp G        &none           &none       &kp H        &kp J  &kp K      &kp L       &mt RCTRL MINUS
-&mt LEFT_SHIFT Z    &kp X  &kp C         &kp V         &kp B        &sys_reset      &sys_reset  &kp N        &kp M  &kp COMMA  &kp PERIOD  &mt RIGHT_SHIFT SLASH
-&mo 7               &mo 6  &kp LEFT_WIN  &kp LEFT_ALT  &lt 2 SPACE  &mo 1           &mo 2       &lt 1 ENTER                                &mo 7
+&kp Q               &kp W         &kp E         &kp R  &kp T                          &kp Y        &kp U  &kp I      &kp O       &kp P
+&mt LEFT_CONTROL A  &kp S         &kp D         &kp F  &kp G        &none      &none  &kp H        &kp J  &kp K      &kp L       &mt RCTRL MINUS
+&mt LEFT_SHIFT Z    &kp X         &kp C         &kp V  &kp B        &mo 7      &mo 7  &kp N        &kp M  &kp COMMA  &kp PERIOD  &mt RIGHT_SHIFT SLASH
+&mo 6               &kp LEFT_WIN  &kp LEFT_ALT  &none  &lt 2 SPACE  &mo 1      &mo 2  &lt 1 ENTER                                &mo 6
             >;
         };
 
         SYMBOL {
             bindings = <
-&kp N1                 &kp N2     &kp N3            &kp N4             &kp N5                        &kp N6         &kp N7         &kp N8            &kp N9         &kp N0
-&mt LCTRL TAB          &kp GRAVE  &kp LEFT_BRACKET  &kp RIGHT_BRACKET  &kp DELETE  &none      &none  &kp BACKSPACE  &kp SEMICOLON  &kp SINGLE_QUOTE  &kp BACKSLASH  &trans
-&mt LEFT_SHIFT ESCAPE  &none      &none             &none              &none       &none      &none  &none          &kp EQUAL      &trans            &trans         &trans
-&none                  &trans     &trans            &trans             &mo 3       &none      &mo 3  &none                                                          &none
+&kp N1                 &kp N2     &kp N3            &kp N4             &kp N5                         &kp N6         &kp N7         &kp N8            &kp N9         &kp N0
+&mt LCTRL TAB          &kp GRAVE  &kp LEFT_BRACKET  &kp RIGHT_BRACKET  &kp DELETE   &none      &none  &kp BACKSPACE  &kp SEMICOLON  &kp SINGLE_QUOTE  &kp BACKSLASH  &trans
+&mt LEFT_SHIFT ESCAPE  &none      &none             &none              &none        &none      &none  &none          &kp EQUAL      &trans            &trans         &trans
+&none                  &trans     &trans            &trans             &lt 3 SPACE  &none      &mo 3  &none                                                          &none
             >;
         };
 
         VIM_NORMAL_1 {
             bindings = <
-&none           &kp LC(RIGHT)  &kp LC(RIGHT)              &mm_vim_ctrl_r  &none                           &td_vim_y  &mm_vim_ctrl_u  &none         &mm_vim_shift_o  &kp LC(V)
-&kp LCTRL       &none          &mm_vim_ctrl_then_shift_d  &none           &none         &none      &none  &kp LEFT   &kp DOWN        &kp UP_ARROW  &kp RIGHT        &kp RCTRL
-&kp LEFT_SHIFT  &kp DELETE     &none                      &none           &kp LC(LEFT)  &none      &none  &none      &none           &none         &none            &mt RIGHT_SHIFT LC(F)
-&none           &trans         &trans                     &trans          &none         &mo 3      &none  &mo 3                                                     &none
+&none           &kp LC(RIGHT)  &kp LC(RIGHT)              &mm_vim_ctrl_r  &none                           &td_vim_y    &mm_vim_ctrl_u  &none         &mm_vim_shift_o  &kp LC(V)
+&kp LCTRL       &none          &mm_vim_ctrl_then_shift_d  &none           &none         &none      &none  &kp LEFT     &kp DOWN        &kp UP_ARROW  &kp RIGHT        &kp RCTRL
+&kp LEFT_SHIFT  &kp DELETE     &none                      &none           &kp LC(LEFT)  &none      &none  &none        &none           &none         &none            &mt RIGHT_SHIFT LC(F)
+&none           &trans         &trans                     &trans          &none         &mo 3      &none  &lt 3 ENTER                                                 &none
             >;
         };
 
