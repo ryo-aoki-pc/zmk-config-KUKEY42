@@ -9,29 +9,29 @@
  * レイヤー番号の別名定義。
  *   &mo / &lt / &to などの「経路（どのレイヤーへ移動するか）」を
  *   数字ではなく名前で書けるようにして可読性を上げる。
- *   ※ レイヤーノード名（DEFAULT 等）との衝突を避けるため別名にしている。
+ *   ※ レイヤーノード名（BASE_QWERTY 等）との衝突を避けるため別名にしている。
  *
- *   番号  別名      レイヤーノード     役割
- *   ----  --------  ----------------   ------------------------------
- *    0    BASE      DEFAULT            通常入力（QWERTY）
- *    1    SYM       SYMBOL             記号・数字
- *    2    VIM_N1    VIM_NORMAL_1       Vim ノーマル（1ページ目）
- *    3    VIM_N2    VIM_NORMAL_2       Vim ノーマル（2ページ目）
- *    4    MOUS      MOUSE              マウス移動
- *    5    SCRL      SCROLL             スクロール／クリック
- *    6    FUNC      FUNCTION           ファンクションキー
- *    7    BT        BLUETOOTH          Bluetooth／出力切替
- *    8    VISUAL    VIM_VISUAL         Vim ビジュアル
+ *   番号  別名        レイヤーノード      役割
+ *   ----  ----------  -----------------   ------------------------------
+ *    0    BASE        BASE_QWERTY         通常入力（QWERTY）
+ *    1    SYM         NUM_SYMBOL          数字・記号
+ *    2    VIM_BASE    VIM_NORMAL_BASE     BASE 層に対応する Vim ノーマル
+ *    3    VIM_SYM     VIM_NORMAL_SYM      SYM 層に対応する Vim ノーマル
+ *    4    MOUS        MOUSE_MOVE          マウス移動
+ *    5    SCRL        MOUSE_SCROLL        スクロール／クリック（MOUSE_MOVE の子）
+ *    6    FUNC        FUNCTION            ファンクションキー
+ *    7    BT          BLUETOOTH           Bluetooth／出力切替
+ *    8    VIM_VISUAL  VIM_VISUAL_BASE     BASE 層に対応する Vim ビジュアル
  */
-#define BASE    0
-#define SYM     1
-#define VIM_N1  2
-#define VIM_N2  3
-#define MOUS    4
-#define SCRL    5
-#define FUNC    6
-#define BT      7
-#define VISUAL  8
+#define BASE        0
+#define SYM         1
+#define VIM_BASE    2
+#define VIM_SYM     3
+#define MOUS        4
+#define SCRL        5
+#define FUNC        6
+#define BT          7
+#define VIM_VISUAL  8
 
 &mt {
     quick-tap-ms = <0>;
@@ -197,7 +197,7 @@
                 <&macro_wait_time 50>,
                 <&kp LS(DOWN)>,
                 <&macro_wait_time 50>,
-                <&to VISUAL>;
+                <&to VIM_VISUAL>;
 
             label = "MACRO_VIM_V_LINE";
         };
@@ -332,7 +332,7 @@
         mm_vim_v: mm_vim_v {
             compatible = "zmk,behavior-mod-morph";
             label = "MM_VIM_V";
-            bindings = <&to VISUAL>, <&macro_vim_v_line>;
+            bindings = <&to VIM_VISUAL>, <&macro_vim_v_line>;
 
             #binding-cells = <0>;
             mods = <(MOD_LSFT|MOD_RSFT)>;
@@ -376,34 +376,34 @@
     keymap {
         compatible = "zmk,keymap";
 
-        DEFAULT {
+        BASE_QWERTY {
             bindings = <
 &kp Q               &kp W         &kp E         &kp R             &kp T                              &kp Y          &kp U         &kp I       &kp O       &kp P
 &mt LEFT_CONTROL A  &kp S         &kp D         &kp F             &kp G          &none    &none      &kp H          &kp J         &kp K       &kp L       &mt RCTRL MINUS
 &mt LEFT_SHIFT Z    &kp X         &kp C         &kp V             &kp B          &mo BT   &mo BT     &kp N          &kp M         &kp COMMA   &kp PERIOD  &mt RIGHT_SHIFT SLASH
-&mo FUNC            &kp LEFT_WIN  &kp LEFT_ALT  &lt VIM_N1 SPACE  &lt VIM_N1 SPACE              &mo SYM  &mo VIM_N1  &lt SYM ENTER                            &mo FUNC
+&mo FUNC            &kp LEFT_WIN  &kp LEFT_ALT  &lt VIM_BASE SPACE  &lt VIM_BASE SPACE              &mo SYM  &mo VIM_BASE  &lt SYM ENTER                            &mo FUNC
             >;
         };
 
-        SYMBOL {
+        NUM_SYMBOL {
             bindings = <
 &kp N1                 &kp N2     &kp N3            &kp N4             &kp N5                                  &kp N6         &kp N7         &kp N8            &kp N9         &kp N0
 &mt LCTRL TAB          &kp GRAVE  &kp LEFT_BRACKET  &kp RIGHT_BRACKET  &kp DELETE      &none      &none       &kp BACKSPACE  &kp SEMICOLON  &kp SINGLE_QUOTE  &kp BACKSLASH  &trans
 &mt LEFT_SHIFT ESCAPE  &none      &none             &none              &none           &none      &none       &none          &kp EQUAL      &trans            &trans         &trans
-&none                  &trans     &trans            &lt VIM_N2 SPACE   &lt VIM_N2 SPACE                 &none  &mo VIM_N2  &none                                             &none
+&none                  &trans     &trans            &lt VIM_SYM SPACE   &lt VIM_SYM SPACE                 &none  &mo VIM_SYM  &none                                             &none
             >;
         };
 
-        VIM_NORMAL_1 {
+        VIM_NORMAL_BASE {
             bindings = <
 &none           &mm_vim_w   &kp LC(RIGHT)  &mm_vim_ctrl_r  &none                              &mm_vim_y         &mm_vim_u  &none         &mm_vim_o  &kp LC(V)
 &kp LCTRL       &none       &mm_vim_d      &none           &mm_vim_g         &none    &none    &kp LEFT          &mm_vim_j  &kp UP_ARROW  &kp RIGHT  &kp RCTRL
 &kp LEFT_SHIFT  &kp DELETE  &none          &mm_vim_v       &kp LC(LEFT)      &none    &none    &mm_vim_n         &none      &none         &none      &kp RIGHT_SHIFT
-&none           &trans      &trans         &none           &none                          &mo VIM_N2  &none  &lt VIM_N2 ENTER                              &none
+&none           &trans      &trans         &none           &none                          &mo VIM_SYM  &none  &lt VIM_SYM ENTER                              &none
             >;
         };
 
-        VIM_NORMAL_2 {
+        VIM_NORMAL_SYM {
             bindings = <
 &none           &none   &none   &mm_vim_shift_4  &none                          &mm_vim_shift_6  &none  &none  &none   &kp HOME
 &kp LCTRL       &none   &none   &none            &none          &none   &none   &kp LEFT         &none  &none  &none   &kp RCTRL
@@ -412,7 +412,7 @@
             >;
         };
 
-        MOUSE {
+        MOUSE_MOVE {
             bindings = <
 &none  &none  &none  &none  &none                       &none  &none  &none     &none  &none
 &none  &none  &none  &none  &none    &none    &none     &none  &none  &mo SCRL  &none  &none
@@ -421,7 +421,7 @@
             >;
         };
 
-        SCROLL {
+        MOUSE_SCROLL {
             bindings = <
 &none  &none  &none  &none  &none                       &none     &none  &none     &none  &none
 &none  &none  &none  &none  &none    &none    &none     &none     &mkp MB1  &none  &mkp MB2  &none
@@ -448,7 +448,7 @@
             >;
         };
 
-        VIM_VISUAL {
+        VIM_VISUAL_BASE {
             bindings = <
 &none           &kp LS(LC(RIGHT))      &kp LS(LC(RIGHT))  &none                   &none                              &macro_vim_visual_y  &none         &none       &none          &macro_vim_visual_p
 &kp LCTRL       &none                  &macro_vim_visual_cut  &none               &mm_vim_visual_g  &none    &none    &kp LS(LEFT)         &kp LS(DOWN)  &kp LS(UP)  &kp LS(RIGHT)  &kp RCTRL
