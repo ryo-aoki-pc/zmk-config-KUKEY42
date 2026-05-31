@@ -4,7 +4,8 @@ on:
   push:
     paths:
       - 'config/KUKEY42.keymap'
-      - 'tools/keymap-docgen/keymap_docgen.py'
+      - 'tools/keymap-docgen'
+      - '.gitmodules'
       - 'tools/KUKEY42.layout.json'
       - '.github/workflows/keymap-docs.yml'
   workflow_dispatch:
