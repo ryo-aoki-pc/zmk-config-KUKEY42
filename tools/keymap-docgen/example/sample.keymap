@@ -1,0 +1,53 @@
+/*
+ * sample.keymap — a tiny, generic ZMK keymap used to demo keymap_docgen.py.
+ *
+ * It is intentionally NOT a real board: a 3+3 split with two rows and three
+ * thumb keys (15 positions). It exercises the behaviours the doc generator
+ * understands — &kp, &mt (mod-tap), &lt (layer-tap), &mo (momentary layer),
+ * a mod-morph, and a macro — so you can see how each renders.
+ *
+ * Render it with:
+ *   python ../keymap_docgen.py sample.keymap -l sample.layout.json -o /tmp/sample.xlsx
+ */
+
+#include <behaviors.dtsi>
+#include <dt-bindings/zmk/keys.h>
+
+/ {
+    macros {
+        macro_hi: macro_hi {
+            compatible = "zmk,behavior-macro";
+            #binding-cells = <0>;
+            bindings = <&kp H>, <&kp I>;
+        };
+    };
+
+    behaviors {
+        mm_comma: mm_comma {
+            compatible = "zmk,behavior-mod-morph";
+            #binding-cells = <0>;
+            bindings = <&kp COMMA>, <&kp SEMICOLON>;
+            mods = <(MOD_LSFT|MOD_RSFT)>;
+        };
+    };
+
+    keymap {
+        compatible = "zmk,keymap";
+
+        DEFAULT {
+            bindings = <
+                &kp Q  &kp W  &kp E      &kp R       &kp T   &kp Y
+                &kp A  &kp S  &kp D      &mm_comma   &kp G   &kp H
+                              &lt 1 SPACE  &mt LSHIFT ENTER  &mo 1
+            >;
+        };
+
+        LOWER {
+            bindings = <
+                &kp N1  &kp N2  &kp N3   &kp N4     &kp N5  &kp N6
+                &kp N7  &kp N8  &kp N9   &macro_hi  &kp N0  &kp MINUS
+                                &trans     &trans     &trans
+            >;
+        };
+    };
+};

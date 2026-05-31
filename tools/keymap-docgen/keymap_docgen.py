@@ -13,15 +13,21 @@ ZMK keymap (.keymap) のレイヤー（指定がなければ全レイヤー）�
 
 それぞれの表は、キーボード物理行ごとに以下の構造を持つ：
   - 左端 1 列: 「操作」 = タップ / ホールド / ダブルタップ / Shift+ / Ctrl+
-  - 右側の列: その物理行のキーを QWERTY 順に並べたもの
+  - 右側の列: その物理行のキーを物理配列順に並べたもの
 
 mod-morph (LSHIFT/RSHIFT, LCTL/RCTL), tap-dance, layer-tap, momentary-layer
 など標準的な ZMK behavior を解析し、再帰的に動作を解決する。
 
+このスクリプトはキーボード固有のデータを一切持たない。各キーの物理位置と表示
+ラベルは -l で渡す物理配列 JSON（各エントリの x / y と任意の label）から取得する
+ため、同じスクリプトを複数のキーボードでそのまま再利用できる。
+
 Usage:
-    python keymap_docgen.py <keymap_file> [<layer_name> ...] [-o output.xlsx]
+    python keymap_docgen.py <keymap_file> [<layer_name> ...] [-l layout.json] [-o output.xlsx]
 
     レイヤー名を省略すると、keymap 内の全レイヤーを定義順で出力する。
+    -l を省略すると keymap と同じベース名の .json を探し、見つからなければ
+    keymap 順の 1 行レイアウトにフォールバックする。
 
 出力先：
     -o で指定した .xlsx と同じディレクトリ／同じベース名で .html も生成される
@@ -29,10 +35,10 @@ Usage:
 
 Examples:
     # 全レイヤーを定義順で出力（レイヤー名の指定を省略）
-    python tools/keymap_docgen.py config/AroundForty-RB.keymap -o KEYMAP.xlsx
+    python keymap_docgen.py <keymap_file> -l <layout.json> -o KEYMAP.xlsx
     # 特定のレイヤーだけ出力
-    python tools/keymap_docgen.py config/AroundForty-RB.keymap VIM_NORMAL_1 -o KEYMAP.xlsx
-    python tools/keymap_docgen.py config/AroundForty-RB.keymap VIM_NORMAL_1 VIM_NORMAL_2 VIM_VISUAL -o KEYMAP.xlsx
+    python keymap_docgen.py <keymap_file> <LAYER_NAME> -l <layout.json> -o KEYMAP.xlsx
+    python keymap_docgen.py <keymap_file> <LAYER_A> <LAYER_B> <LAYER_C> -l <layout.json> -o KEYMAP.xlsx
 """
 
 import argparse
@@ -487,18 +493,12 @@ def summarize_macro(bindings: list[str]) -> str:
 # Visual label (per physical key index, not per column position)
 # ============================================================================
 
-# Label for each binding index 0..42 = the DEFAULT-layer physical key identity.
-# Keyed by index (not by column slot) so reordering columns into physical order
-# can never desync a label from its binding.
-KEY_LABELS = {
-    0: 'Q', 1: 'W', 2: 'E', 3: 'R', 4: 'T', 5: 'Y', 6: 'U', 7: 'I', 8: 'O', 9: 'P',
-    10: 'A', 11: 'S', 12: 'D', 13: 'F', 14: 'G', 15: '中央', 16: '中央',
-    17: 'H', 18: 'J', 19: 'K', 20: 'L', 21: '-',
-    22: 'Z', 23: 'X', 24: 'C', 25: 'V', 26: 'B', 27: 'mo中央L', 28: 'mo中央R',
-    29: 'N', 30: 'M', 31: ',', 32: '.', 33: '/',
-    34: 'mo6 (L outer)', 35: 'LWin', 36: 'LAlt', 37: 'SPACE', 38: 'SPACE',
-    39: 'mo1 (L center)', 40: 'mo2 (center)', 41: 'lt1 ENTER', 42: 'mo6 (R outer)',
-}
+# Per-binding-index display label = that physical key's identity on the DEFAULT
+# layer (e.g. index 0 -> 'Q'). Populated at runtime in main() from the physical-
+# layout JSON's optional per-key "label" field, so this script carries no
+# keyboard-specific data. Keyed by index (not by column slot) so reordering
+# columns into physical order can never desync a label from its binding.
+KEY_LABELS: dict[int, str] = {}
 
 
 def get_label(idx: int) -> str:
@@ -510,12 +510,12 @@ def get_label(idx: int) -> str:
 # ============================================================================
 
 def get_row_layout(total: int) -> list[tuple[int, int]]:
-    """Determine the physical row layout based on total binding count."""
-    if total == 43:
-        return [(1, 10), (2, 12), (3, 12), (4, 9)]
-    if total == 42:
-        return [(1, 10), (2, 10), (3, 11), (4, 11)]
-    return [(0, total)]  # fallback: linear
+    """Fallback row layout when no physical-layout JSON is supplied.
+
+    Without per-key (x, y) coordinates the real row split is unknown, so place
+    every binding in a single keymap-order row. Pass a physical-layout JSON
+    (see load_physical_layout) to get an accurate multi-row grid."""
+    return [(0, total)]  # fallback: linear (single keymap-order row)
 
 
 # ============================================================================
@@ -525,31 +525,40 @@ def get_row_layout(total: int) -> list[tuple[int, int]]:
 GAP = 'GAP'  # sentinel marking a blank split-gap display column
 
 
-def load_physical_layout(path: Path) -> list[tuple[float, float]] | None:
-    """Parse a ZMK physical-layout JSON into an ordered (x, y) list per key index.
+def load_physical_layout(path: Path):
+    """Parse a ZMK physical-layout JSON into ordered per-key data.
 
     The JSON's `layout` array is in the same order as the keymap bindings, so
-    entry i is the physical position of binding i. Returns None when the file is
-    missing or cannot be parsed (caller falls back to keymap-order rendering).
+    entry i describes binding i. Each entry carries `x`/`y` (physical position)
+    and may carry an optional `label` (that key's DEFAULT-layer identity, e.g.
+    "Q"), which is how the tool stays free of keyboard-specific data.
+
+    Returns a (coords, labels) pair:
+      - coords: list of (x, y) floats, or None when the file is missing or
+        cannot be parsed (caller falls back to keymap-order rendering).
+      - labels: {binding_index: label} for every entry that provides a label.
     """
     try:
         data = json.loads(Path(path).read_text(encoding='utf-8'))
     except (OSError, ValueError):
-        return None
+        return None, {}
     layouts = data.get('layouts') if isinstance(data, dict) else None
     if not layouts:
-        return None
+        return None, {}
     layout = layouts.get('default_layout') or next(iter(layouts.values()))
     entries = layout.get('layout') if isinstance(layout, dict) else None
     if not entries:
-        return None
+        return None, {}
     coords: list[tuple[float, float]] = []
-    for e in entries:
+    labels: dict[int, str] = {}
+    for i, e in enumerate(entries):
         try:
             coords.append((float(e['x']), float(e['y'])))
         except (KeyError, TypeError, ValueError):
-            return None
-    return coords or None
+            return None, {}
+        if isinstance(e, dict) and e.get('label') is not None:
+            labels[i] = str(e['label'])
+    return (coords or None), labels
 
 
 def build_grid(coords: list[tuple[float, float]]):
@@ -1067,8 +1076,8 @@ def write_html(layers_data: list[tuple[str, list[str]]],
         body.append('<li>' + _html_inline('各表の左端 1 列が「操作」（タップ / ホールド / ダブルタップ / Shift+ / Ctrl+）または「Row N」見出し。') + '</li>')
         body.append('</ul>')
 
-        # Positions that are `&none` in DEFAULT, plus the `&mo 7` center-column
-        # and raised thumb keys, are hidden in every layer's table.
+        # Positions that are `&none` in the DEFAULT layer are inactive and
+        # hidden in every layer's table.
         active_indices = _compute_active_indices(layers_data)
 
         for mode_label, mode in [('動作', 'action'), ('経路', 'path')]:
@@ -1161,8 +1170,10 @@ def main() -> int:
     # Physical layout drives the row/column arrangement to match the real board.
     total = len(layers_data[0][1]) if layers_data else 0
     layout_path = Path(args.layout) if args.layout else keymap_path.with_suffix('.json')
-    coords = load_physical_layout(layout_path)
+    coords, labels = load_physical_layout(layout_path)
     if coords and len(coords) == total:
+        KEY_LABELS.clear()
+        KEY_LABELS.update(labels)
         grid, display_cols = build_grid(coords)
         print(f'physical layout: {layout_path} ({len(coords)} keys)')
     else:
