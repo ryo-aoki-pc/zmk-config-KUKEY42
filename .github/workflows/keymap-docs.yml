@@ -6,7 +6,6 @@ on:
       - 'config/KUKEY42.keymap'
       - 'tools/keymap-docgen'
       - '.gitmodules'
-      - 'tools/KUKEY42.layout.json'
       - '.github/workflows/keymap-docs.yml'
   workflow_dispatch:
 
@@ -31,7 +30,7 @@ jobs:
         run: pip install openpyxl
 
       - name: Regenerate KEYMAP docs
-        run: python tools/keymap-docgen/keymap_docgen.py config/KUKEY42.keymap -l tools/KUKEY42.layout.json -o KEYMAP.xlsx
+        run: python tools/keymap-docgen/keymap_docgen.py config/KUKEY42.keymap -o KEYMAP.xlsx
 
       - name: Commit KEYMAP docs if changed
         if: github.event_name != 'pull_request'
