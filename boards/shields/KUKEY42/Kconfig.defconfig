@@ -1,7 +1,7 @@
 if SHIELD_KUKEY42_R
 
 config ZMK_KEYBOARD_NAME
-    default "KUKEY42_R"
+    default "KUKEY42"
 
 config ZMK_SPLIT
     default y
@@ -14,7 +14,7 @@ endif
 if SHIELD_KUKEY42_L
 
 config ZMK_KEYBOARD_NAME
-    default "KUKEY42_L"
+    default "KUKEY42"
 
 config ZMK_SPLIT
     default y
