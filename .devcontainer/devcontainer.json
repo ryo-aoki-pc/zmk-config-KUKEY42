@@ -1,0 +1,26 @@
+{
+  "name": "ZMK Local Build",
+  "build": { "dockerfile": "Dockerfile" },
+  "remoteUser": "root",
+  "workspaceFolder": "/workspaces/zmk-config",
+  "mounts": [
+    "source=kukey42-zmk-root-user,target=/root,type=volume",
+    "source=${localWorkspaceFolder},target=/workspaces/zmk-config,type=bind"
+  ],
+  "postCreateCommand": "bash .devcontainer/setup-west.sh",
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "terminal.integrated.shell.linux": "/bin/bash",
+        "files.associations": {
+          "*.keymap": "devicetree"
+        }
+      },
+      "extensions": [
+        "ms-vscode.makefile-tools",
+        "ms-azuretools.vscode-docker",
+        "spadin.zmk-tools"
+      ]
+    }
+  }
+}
