@@ -49,6 +49,7 @@
 
 &zip_temp_layer {
     excluded-positions = <
+        12 // D
         19 // K
     >;
 
@@ -470,19 +471,19 @@
 
         MOUSE_MOVE {
             bindings = <
-&none  &none  &none  &none  &none                       &none  &none  &none     &none  &none
-&none  &none  &none  &none  &none    &none    &none     &none  &none  &mo SCRL  &none  &none
-&none  &none  &none  &none  &none    &none    &none     &none  &none  &none     &none  &none
-&none  &none  &none  &none  &none                       &none  &none  &none                   &none
+&none  &none  &none     &none  &none                &none  &none  &none     &none  &none
+&none  &none  &mo SCRL  &none  &none  &none  &none  &none  &none  &mo SCRL  &none  &none
+&none  &none  &none     &none  &none  &none  &none  &none  &none  &none     &none  &none
+&none  &none  &none     &none  &none                &none  &none  &none            &none
             >;
         };
 
         MOUSE_SCROLL {
             bindings = <
-&none  &none  &none  &none  &none                       &none     &none  &none     &none  &none
-&none  &none  &none  &none  &none    &none    &none     &none     &mkp MB1  &none  &mkp MB2  &none
-&none  &none  &none  &none  &none    &none    &none     &none     &mkp MB4  &none  &mkp MB5  &none
-&none  &none  &none  &none  &none                       &none     &none  &none                   &none
+&none  &none     &none  &none     &none                &none  &none     &none  &none     &none
+&none  &mkp MB2  &none  &mkp MB1  &none  &none  &none  &none  &mkp MB1  &none  &mkp MB2  &none
+&none  &mkp MB5  &none  &mkp MB4  &none  &none  &none  &none  &mkp MB4  &none  &mkp MB5  &none
+&none  &none     &none  &none     &none                &none  &none     &none            &none
             >;
         };
     };
