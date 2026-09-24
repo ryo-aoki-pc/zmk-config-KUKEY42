@@ -1,22 +1,13 @@
-if SHIELD_KUKEY42_R
+if SHIELD_KUKEY42_L || SHIELD_KUKEY42_R
+    config ZMK_KEYBOARD_NAME
+        default "KUKEY42"
 
-config ZMK_KEYBOARD_NAME
-    default "KUKEY42"
+    config NFCT_PINS_AS_GPIOS
+        default y
 
-config ZMK_SPLIT
-    default y
+    config ZMK_SPLIT
+        default y
 
-config ZMK_SPLIT_ROLE_CENTRAL
-    default y
-
-endif
-
-if SHIELD_KUKEY42_L
-
-config ZMK_KEYBOARD_NAME
-    default "KUKEY42"
-
-config ZMK_SPLIT
-    default y
-
+    config ZMK_POINTING
+        default y
 endif

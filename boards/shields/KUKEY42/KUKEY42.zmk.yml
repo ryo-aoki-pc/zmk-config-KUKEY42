@@ -4,5 +4,9 @@ name: KUKEY42
 type: shield
 url: https://github.com/r-Keys-kbd/zmk-config-KUKEY42
 requires: [seeeduino_xiao_ble]
+siblings:
+  - KUKEY42_L
+  - KUKEY42_R
 features:
   - keys
+  - pointer
