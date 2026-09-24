@@ -1,0 +1,68 @@
+# .gitignore
+
+# OS / Editor junk
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*.orig
+*.bak
+*.tmp
+*~
+.vscode/
+.idea/
+*.code-workspace
+
+# Python/Node tooling (if used)
+__pycache__/
+*.pyc
+node_modules/
+dist/
+build/
+
+# ZMK / Zephyr / West related
+# Local build directories (west build -d)
+build/
+build-*/
+zephyr/.cache/
+zephyr/.zephyr/*
+.tmp/
+
+# GitHub Actions runner temp artifacts (local runs)
+artifacts/
+*.uf2
+*.bin
+*.hex
+
+# Logs
+logs/
+*.log
+
+# Keymap Drawer outputs (if generated locally)
+keymap-drawer/out/
+keymap-drawer/*.svg.tmp
+
+# Nix / Docker (if used)
+result
+*.drv
+*.nar
+.cache/
+docker-compose.override.yml
+
+# Local environment files
+.env
+.env.*
+
+_west/
+firmware_builds/
+
+# ZMK/Zephyr west workspace (リポジトリ直下に作られた場合)
+zephyr/*
+!zephyr/module.yml
+.west/
+modules/
+
+# 生成物のスプレッドシート (KEYMAP.xlsx だけは追跡する)
+*.xls
+*.xlsx
+!KEYMAP.xlsx
