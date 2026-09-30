@@ -2,6 +2,8 @@ description: |
   REL_X / REL_Y に 2x2 行列を掛ける入力プロセッサ。
     X' = (m11 * X + m12 * Y) / divisor
     Y' = (m21 * X + m22 * Y) / divisor
+  X と Y は元の listener では止め、このノード自身を入力デバイスとして出し直す。
+  補正後の値を使うには、device = <&このノード> の zmk,input-listener を別に用意する。
 
 compatible: "zmk,input-processor-xy-matrix"
 

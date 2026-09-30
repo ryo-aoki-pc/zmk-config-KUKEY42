@@ -21,20 +21,32 @@
     //   Y' = (m21 * X + m22 * Y) / divisor
     // 軸ごとの倍率では傾きが取れないため、X と Y を混ぜる 2x2 行列にしている
     // (src/input_processor_xy_matrix.c)。値はトラックボール計測ページで出したものを入れる。
-    // 経緯: 初期値 <1155 (-1155) (-577) 2309> で計測すると、まだ「＼」向き約 41° に
-    // 長軸:短軸 = 約 2.4 の楕円が残っていたため、計測ページが出した値に更新した
+    // 経緯:
+    //   <1155 (-1155) (-577) 2309> (見た目からの推定) → まだ「＼」に長い
+    //   <1465 (-2252) (-1193) 3200> (計測ページの値) → 逆に「／」に長い
+    //   → 補正の強さを 2 つの中間 (行列の平方根で半分) にした値
     trackball_matrix: trackball_matrix {
         compatible = "zmk,input-processor-xy-matrix";
         #input-processor-cells = <0>;
-        matrix = <1465 (-2252) (-1193) 3200>;
+        matrix = <1278 (-1662) (-864) 2688>;
         divisor = <1000>;
     };
 
+    // センサーの X/Y は trackball_matrix が止めて、補正後の値を trackball_matrix_listener に
+    // 出し直す。こちらに残るのはスクロール (WHEEL / HWHEEL) だけ
     trackball_listener {
         status = "okay";
         compatible = "zmk,input-listener";
         device = <&trackball>;
         input-processors = <&trackball_matrix>, <&zip_temp_layer 8 10000>;
+    };
+
+    // 補正後の X/Y でカーソルを動かす
+    trackball_matrix_listener {
+        status = "okay";
+        compatible = "zmk,input-listener";
+        device = <&trackball_matrix>;
+        input-processors = <&zip_temp_layer 8 10000>;
     };
 };
 

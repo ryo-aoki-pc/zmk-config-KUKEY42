@@ -7,27 +7,27 @@
  *   X' = (m11 * X + m12 * Y) / divisor
  *   Y' = (m21 * X + m22 * Y) / divisor
  *
- * 入力プロセッサは 1 イベントずつ処理するため、X と Y を同時には扱えない。
- * PMW3610 ドライバは 1 回の報告ごとに REL_X (sync なし) → REL_Y (sync あり) の順で
- * 必ず両方を送るので、次のように計算する。
- *   - Y' は、同じ報告の X を保持しておいて計算する (正確)
- *   - X' の混合項 (m12 * Y) は、1 つ前の報告の Y で計算する
- *     (X は Y より先に listener へ渡るため)
- * 動きが途切れたら、前回の Y は次の動きに持ち越さない。
+ * 入力プロセッサは 1 イベントずつ処理し、listener は REL_X を受けた時点で値を
+ * 足し込んでしまう。PMW3610 ドライバは 1 回の報告ごとに REL_X (sync なし) →
+ * REL_Y (sync あり) の順で送るため、X を受けた時点では X' を正しく計算できない。
+ *
+ * そこで、X と Y はここで止めて (ZMK_INPUT_PROC_STOP)、組がそろった時点で
+ * このプロセッサ自身を入力デバイスとして X' / Y' を出し直す。
+ * overlay 側で、このプロセッサを device にした input-listener を別に用意し、
+ * そちらがカーソルを動かす。WHEEL などほかのイベントはそのまま元の listener に流す。
  */
 
 #define DT_DRV_COMPAT zmk_input_processor_xy_matrix
 
 #include <zephyr/kernel.h>
 #include <zephyr/device.h>
+#include <zephyr/input/input.h>
 #include <zephyr/sys/util.h>
 #include <drivers/input_processor.h>
 
 #include <zephyr/logging/log.h>
 
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
-
-#define XY_MATRIX_IDLE_RESET_MS 100
 
 struct xy_matrix_config {
     int32_t m11;
@@ -38,11 +38,10 @@ struct xy_matrix_config {
 };
 
 struct xy_matrix_data {
-    int32_t x;      // 今回の報告の X (Y' の計算に使う)
-    int32_t prev_y; // 前回の報告の Y (X' の混合項に使う)
+    int32_t x; // Y を待っている X
+    bool has_x;
     int32_t remainder_x;
     int32_t remainder_y;
-    int64_t last_event_ms;
 };
 
 static int32_t divide_with_remainder(int32_t numerator, int32_t divisor, int32_t *remainder) {
@@ -53,10 +52,29 @@ static int32_t divide_with_remainder(int32_t numerator, int32_t divisor, int32_t
     return CLAMP(quotient, INT16_MIN, INT16_MAX);
 }
 
+static void xy_matrix_emit(const struct device *dev, int32_t x, int32_t y, bool sync) {
+    const struct xy_matrix_config *cfg = dev->config;
+    struct xy_matrix_data *data = dev->data;
+
+    int32_t out_x =
+        divide_with_remainder(cfg->m11 * x + cfg->m12 * y, cfg->divisor, &data->remainder_x);
+    int32_t out_y =
+        divide_with_remainder(cfg->m21 * x + cfg->m22 * y, cfg->divisor, &data->remainder_y);
+
+    LOG_DBG("xy matrix: (%d, %d) -> (%d, %d)", x, y, out_x, out_y);
+
+    if (out_x == 0 && out_y == 0) {
+        return;
+    }
+
+    // input スレッド内から呼ぶので待たない (Zephyr も input スレッド内では K_NO_WAIT にする)
+    input_report_rel(dev, INPUT_REL_X, out_x, false, K_NO_WAIT);
+    input_report_rel(dev, INPUT_REL_Y, out_y, sync, K_NO_WAIT);
+}
+
 static int xy_matrix_handle_event(const struct device *dev, struct input_event *event,
                                   uint32_t param1, uint32_t param2,
                                   struct zmk_input_processor_state *state) {
-    const struct xy_matrix_config *cfg = dev->config;
     struct xy_matrix_data *data = dev->data;
 
     if (event->type != INPUT_EV_REL) {
@@ -64,39 +82,33 @@ static int xy_matrix_handle_event(const struct device *dev, struct input_event *
     }
 
     switch (event->code) {
-    case INPUT_REL_X: {
-        int64_t now = k_uptime_get();
-        if (now - data->last_event_ms > XY_MATRIX_IDLE_RESET_MS) {
-            data->prev_y = 0;
+    case INPUT_REL_X:
+        if (data->has_x) {
+            // 前の X に Y が来なかった
+            xy_matrix_emit(dev, data->x, 0, true);
         }
-        data->last_event_ms = now;
 
-        data->x = event->value;
-        int32_t x = divide_with_remainder(cfg->m11 * data->x + cfg->m12 * data->prev_y,
-                                          cfg->divisor, &data->remainder_x);
+        if (event->sync) {
+            // この報告には Y が来ない
+            data->has_x = false;
+            xy_matrix_emit(dev, event->value, 0, true);
+        } else {
+            data->x = event->value;
+            data->has_x = true;
+        }
+        return ZMK_INPUT_PROC_STOP;
 
-        LOG_DBG("xy matrix: X %d (prev Y %d) -> %d", data->x, data->prev_y, x);
-        event->value = x;
-        break;
-    }
     case INPUT_REL_Y: {
-        int32_t raw_y = event->value;
-        int32_t y = divide_with_remainder(cfg->m21 * data->x + cfg->m22 * raw_y, cfg->divisor,
-                                          &data->remainder_y);
+        int32_t x = data->has_x ? data->x : 0;
+        data->has_x = false;
 
-        LOG_DBG("xy matrix: Y %d (X %d) -> %d", raw_y, data->x, y);
-        event->value = y;
-
-        data->prev_y = raw_y;
-        data->x = 0;
-        data->last_event_ms = k_uptime_get();
-        break;
+        xy_matrix_emit(dev, x, event->value, event->sync);
+        return ZMK_INPUT_PROC_STOP;
     }
+
     default:
-        break;
+        return ZMK_INPUT_PROC_CONTINUE;
     }
-
-    return ZMK_INPUT_PROC_CONTINUE;
 }
 
 static struct zmk_input_processor_driver_api xy_matrix_driver_api = {
