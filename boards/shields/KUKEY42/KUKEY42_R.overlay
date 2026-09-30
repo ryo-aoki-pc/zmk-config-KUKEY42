@@ -16,12 +16,38 @@
 };
 
 / {
+    // ボールを回したときの楕円 (縦横比と傾き) を真円に近づける補正。
+    //   X' = (m11 * X + m12 * Y) / divisor
+    //   Y' = (m21 * X + m22 * Y) / divisor
+    // 軸ごとの倍率では傾きが取れないため、X と Y を混ぜる 2x2 行列にしている
+    // (src/input_processor_xy_matrix.c)。値はトラックボール計測ページで出したものを入れる。
+    // 経緯 (前のファーム X 1 倍 / Y 2 倍は「＼」に長かった):
+    //   <1465 (-2252) (-1193) 3200> → 「／」に長い (補正がかかりすぎ)
+    //   <1278 (-1662) (-864) 2688>  → まだ「／」
+    //   <1209 (-1400) (-716) 2483>  → まだ「／」(計測で縦横比 2.17)
+    //   → その計測で計測ページが出した値
+    trackball_matrix: trackball_matrix {
+        compatible = "zmk,input-processor-xy-matrix";
+        #input-processor-cells = <0>;
+        matrix = <995 (-497) (-305) 2163>;
+        divisor = <1000>;
+    };
+
+    // センサーの X/Y は trackball_matrix が止めて、補正後の値を trackball_matrix_listener に
+    // 出し直す。こちらに残るのはスクロール (WHEEL / HWHEEL) だけ
     trackball_listener {
         status = "okay";
         compatible = "zmk,input-listener";
         device = <&trackball>;
-        // Y 方向の移動量が小さいため Y のみ 2 倍 (X は等倍)。意図的な非対称なので zip_xy_scaler に統一しないこと
-        input-processors = <&zip_y_scaler 2 1>, <&zip_temp_layer 8 10000>;
+        input-processors = <&trackball_matrix>, <&zip_temp_layer 8 10000>;
+    };
+
+    // 補正後の X/Y でカーソルを動かす
+    trackball_matrix_listener {
+        status = "okay";
+        compatible = "zmk,input-listener";
+        device = <&trackball_matrix>;
+        input-processors = <&zip_temp_layer 8 10000>;
     };
 };
 
