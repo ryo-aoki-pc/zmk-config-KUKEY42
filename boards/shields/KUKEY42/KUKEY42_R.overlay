@@ -20,7 +20,8 @@
         status = "okay";
         compatible = "zmk,input-listener";
         device = <&trackball>;
-        input-processors = <&zip_xy_scaler 2 1>, <&zip_temp_layer 8 10000>;
+        // Y 方向の移動量が小さいため Y のみ 2 倍 (X は等倍)。意図的な非対称なので zip_xy_scaler に統一しないこと
+        input-processors = <&zip_y_scaler 2 1>, <&zip_temp_layer 8 10000>;
     };
 };
 
