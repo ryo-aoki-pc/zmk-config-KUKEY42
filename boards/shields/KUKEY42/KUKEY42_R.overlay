@@ -21,11 +21,12 @@
     //   Y' = (m21 * X + m22 * Y) / divisor
     // 軸ごとの倍率では傾きが取れないため、X と Y を混ぜる 2x2 行列にしている
     // (src/input_processor_xy_matrix.c)。値はトラックボール計測ページで出したものを入れる。
-    // 初期値: 旧設定 (X 1 倍 / Y 2 倍) で「＼」向き 45° に長軸:短軸 = 3 の楕円だったのを打ち消す値
+    // 経緯: 初期値 <1155 (-1155) (-577) 2309> で計測すると、まだ「＼」向き約 41° に
+    // 長軸:短軸 = 約 2.4 の楕円が残っていたため、計測ページが出した値に更新した
     trackball_matrix: trackball_matrix {
         compatible = "zmk,input-processor-xy-matrix";
         #input-processor-cells = <0>;
-        matrix = <1155 (-1155) (-577) 2309>;
+        matrix = <1465 (-2252) (-1193) 3200>;
         divisor = <1000>;
     };
 
