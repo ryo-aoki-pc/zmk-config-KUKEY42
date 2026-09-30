@@ -16,12 +16,24 @@
 };
 
 / {
+    // ボールを回したときの楕円 (縦横比と傾き) を真円に近づける補正。
+    //   X' = (m11 * X + m12 * Y) / divisor
+    //   Y' = (m21 * X + m22 * Y) / divisor
+    // 軸ごとの倍率では傾きが取れないため、X と Y を混ぜる 2x2 行列にしている
+    // (src/input_processor_xy_matrix.c)。値はトラックボール計測ページで出したものを入れる。
+    // 初期値: 旧設定 (X 1 倍 / Y 2 倍) で「＼」向き 45° に長軸:短軸 = 3 の楕円だったのを打ち消す値
+    trackball_matrix: trackball_matrix {
+        compatible = "zmk,input-processor-xy-matrix";
+        #input-processor-cells = <0>;
+        matrix = <1155 (-1155) (-577) 2309>;
+        divisor = <1000>;
+    };
+
     trackball_listener {
         status = "okay";
         compatible = "zmk,input-listener";
         device = <&trackball>;
-        // Y 方向の移動量が小さいため Y のみ 2 倍 (X は等倍)。意図的な非対称なので zip_xy_scaler に統一しないこと
-        input-processors = <&zip_y_scaler 2 1>, <&zip_temp_layer 8 10000>;
+        input-processors = <&trackball_matrix>, <&zip_temp_layer 8 10000>;
     };
 };
 

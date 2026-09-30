@@ -1,0 +1,4 @@
+config ZMK_INPUT_PROCESSOR_XY_MATRIX
+    bool "2x2 matrix input processor for REL_X / REL_Y"
+    default y
+    depends on DT_HAS_ZMK_INPUT_PROCESSOR_XY_MATRIX_ENABLED

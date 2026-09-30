@@ -1,0 +1,18 @@
+description: |
+  REL_X / REL_Y に 2x2 行列を掛ける入力プロセッサ。
+    X' = (m11 * X + m12 * Y) / divisor
+    Y' = (m21 * X + m22 * Y) / divisor
+
+compatible: "zmk,input-processor-xy-matrix"
+
+include: ip_zero_param.yaml
+
+properties:
+  matrix:
+    type: array
+    required: true
+    description: m11 m12 m21 m22 の 4 要素。負の値は (-123) のように括弧で書く
+  divisor:
+    type: int
+    default: 1000
+    description: matrix の各要素を割る値
