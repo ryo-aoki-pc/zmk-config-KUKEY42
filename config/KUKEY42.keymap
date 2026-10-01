@@ -47,10 +47,23 @@
     flavor = "balanced";
 };
 
+/*
+ * AML (MOUSE_MOVE) 中に押しても AML を解除しないキー位置。
+ *   D / K: スクロール用の &mo SCRL。
+ *   A / - / Z / / / Win / Alt: MOUSE_MOVE / MOUSE_SCROLL では修飾キー
+ *     (BASE の &mt / &kp と同じ Ctrl / Shift / Win / Alt)。AML に入ってから
+ *     Shift + クリック、Ctrl + ホイールなどを押せるようにする。
+ */
 &zip_temp_layer {
     excluded-positions = <
-        12 // D
-        19 // K
+        10 // A (左 Ctrl)
+        12 // D (&mo SCRL)
+        19 // K (&mo SCRL)
+        21 // - (右 Ctrl)
+        22 // Z (左 Shift)
+        33 // / (右 Shift)
+        35 // 左 Win
+        36 // 左 Alt
     >;
 
     require-prior-idle-ms = <200>;
@@ -472,18 +485,18 @@
         MOUSE_MOVE {
             bindings = <
 &none  &none  &none     &none  &none                &none  &none  &none     &none  &none
-&none  &none  &mo SCRL  &none  &none  &none  &none  &none  &none  &mo SCRL  &none  &none
-&none  &none  &none     &none  &none  &none  &none  &none  &none  &none     &none  &none
-&none  &none  &none     &none  &none                &none  &none  &none            &none
+&kp LCTRL  &none  &mo SCRL  &none  &none  &none  &none  &none  &none  &mo SCRL  &none  &kp RCTRL
+&kp LEFT_SHIFT  &none  &none     &none  &none  &none  &none  &none  &none  &none     &none  &kp RIGHT_SHIFT
+&none  &kp LEFT_WIN  &kp LEFT_ALT     &none  &none                &none  &none  &none            &none
             >;
         };
 
         MOUSE_SCROLL {
             bindings = <
 &none  &none     &none  &none     &none                &none  &none     &none  &none     &none
-&none  &mkp MB2  &none  &mkp MB1  &none  &none  &none  &none  &mkp MB1  &none  &mkp MB2  &none
-&none  &mkp MB5  &none  &mkp MB4  &none  &none  &none  &none  &mkp MB4  &none  &mkp MB5  &none
-&none  &none     &none  &none     &none                &none  &none     &none            &none
+&kp LCTRL  &mkp MB2  &none  &mkp MB1  &none  &none  &none  &none  &mkp MB1  &none  &mkp MB2  &kp RCTRL
+&kp LEFT_SHIFT  &mkp MB5  &none  &mkp MB4  &none  &none  &none  &none  &mkp MB4  &none  &mkp MB5  &kp RIGHT_SHIFT
+&none  &kp LEFT_WIN     &kp LEFT_ALT  &none     &none                &none  &none     &none            &none
             >;
         };
     };
