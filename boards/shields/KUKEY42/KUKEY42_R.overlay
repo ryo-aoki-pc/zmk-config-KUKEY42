@@ -1,5 +1,6 @@
 #include "KUKEY42.dtsi"
 #include <input/processors.dtsi>
+#include <zephyr/dt-bindings/input/input-event-codes.h>
 
 &default_transform {
     col-offset = <6>;
@@ -42,12 +43,28 @@
         input-processors = <&trackball_matrix>, <&zip_temp_layer 8 10000>;
     };
 
-    // 補正後の X/Y でカーソルを動かす
+    // BLE で送るカーソルのレポートを、指定した ms に 1 回までにまとめる (USB 接続中は素通し)。
+    // ドライバは 8ms ごと (CONFIG_PMW3610_POLLING_RATE_125_SW) に報告し、ZMK はその 1 回ごとに
+    // レポートを 1 つ送る。ほかのキーボードも同じ PC に BLE でつないでいると、送信の機会が足りずに
+    // レポートが溜まり (最大 20 個)、カーソルが遅れてまとめて動く。間隔に満たない X/Y は捨てずに
+    // 次のレポートに足す (badjeff/zmk-input-processor-report-rate-limit)。
+    // 値は 15: 8ms ごとの報告が 16ms ごと (AroundFortyRB と同じ) になる。時刻がミリ秒単位なので、
+    // 16 にすると 16ms と 24ms が混ざる。まだカクつくときは 30 (32ms ごと) に上げる
+    trackball_rate_limit: trackball_rate_limit {
+        compatible = "zmk,input-processor-report-rate-limit";
+        #input-processor-cells = <1>;
+        type = <INPUT_EV_REL>;
+        codes = <INPUT_REL_X INPUT_REL_Y>;
+        limit-ble-only;
+    };
+
+    // 補正後の X/Y でカーソルを動かす。間隔をまとめるのは補正の後
+    // (前にすると、trackball_matrix が組にして待つ X と Y がずれる)
     trackball_matrix_listener {
         status = "okay";
         compatible = "zmk,input-listener";
         device = <&trackball_matrix>;
-        input-processors = <&zip_temp_layer 8 10000>;
+        input-processors = <&trackball_rate_limit 15>, <&zip_temp_layer 8 10000>;
     };
 };
 
