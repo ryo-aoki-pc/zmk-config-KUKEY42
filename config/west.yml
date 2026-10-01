@@ -6,6 +6,8 @@ manifest:
       url-base: https://github.com/r-Keys-kbd
     - name: caksoylar
       url-base: https://github.com/caksoylar
+    - name: badjeff
+      url-base: https://github.com/badjeff
   projects:
     - name: zmk
       remote: zmkfirmware
@@ -17,5 +19,11 @@ manifest:
     - name: zmk-rgbled-widget
       remote: caksoylar
       revision: v0.3
+    # トラックボールのレポートを BLE で送る間隔をまとめる入力プロセッサ (KUKEY42_R.overlay の trackball_rate_limit)。
+    # main (b056cb1 以降) は ZMK v0.3.0 に無い zmk_endpoint_get_selected() を使うため、
+    # v0.3.0 にある zmk_endpoints_selected() を使う最後のコミットに固定する
+    - name: zmk-input-processor-report-rate-limit
+      remote: badjeff
+      revision: f43f37aae7aaa7bf0ec4d432683b873a7e3a8efa
   self:
     path: config
