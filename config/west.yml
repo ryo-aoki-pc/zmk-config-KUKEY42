@@ -8,6 +8,8 @@ manifest:
       url-base: https://github.com/caksoylar
     - name: badjeff
       url-base: https://github.com/badjeff
+    - name: ryo-aoki-pc
+      url-base: https://github.com/ryo-aoki-pc
   projects:
     - name: zmk
       remote: zmkfirmware
@@ -25,5 +27,9 @@ manifest:
     - name: zmk-input-processor-report-rate-limit
       remote: badjeff
       revision: f43f37aae7aaa7bf0ec4d432683b873a7e3a8efa
+    # トラックボールの速さに応じてカーソルに倍率を掛ける入力プロセッサ (KUKEY42_R.overlay の trackball_accel)
+    - name: zmk-input-processor-xy-accel
+      remote: ryo-aoki-pc
+      revision: a5233f76a88b369dfebc37371f8244c89df2d0d4
   self:
     path: config

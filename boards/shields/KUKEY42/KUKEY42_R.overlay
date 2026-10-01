@@ -27,11 +27,29 @@
     //   <1278 (-1662) (-864) 2688>  → まだ「／」
     //   <1209 (-1400) (-716) 2483>  → まだ「／」(計測で縦横比 2.17)
     //   → その計測で計測ページが出した値
+    // 経緯の値と matrix は CPI 1000・divisor 1000 のときのもの。CPI を 2000 に上げたので、
+    // divisor を 2000 にして補正の形と速さを保っている (縦は約 2 倍していたため 2 ずつ動いていたが、
+    // 1 ずつ細かく動くようになる)
     trackball_matrix: trackball_matrix {
         compatible = "zmk,input-processor-xy-matrix";
         #input-processor-cells = <0>;
         matrix = <995 (-497) (-305) 2163>;
-        divisor = <1000>;
+        divisor = <2000>;
+    };
+
+    // カーソルの加速 (zmk-input-processor-xy-accel)。LisM と同じ値。ボールを転がす速さ (カウント/秒) に
+    // 応じて移動量に倍率 (1000 = 等倍) を掛ける。速さ 0 で min-factor、speed-threshold で等倍、
+    // speed-max 以上で max-factor になり、その間は直線で補間する。ゆっくり動かしたときは
+    // カーソルを細かく動かし、速く動かしたときは遠くまで動かす。
+    // ゆっくり動かしたときに遅すぎれば min-factor を上げ、速く動かしたときに飛びすぎれば
+    // (Windows の「ポインターの精度を高める」と重なるときなど) max-factor を下げる (1000 で加速なし)
+    trackball_accel: trackball_accel {
+        compatible = "zmk,input-processor-xy-accel";
+        #input-processor-cells = <0>;
+        min-factor = <500>;
+        max-factor = <1300>;
+        speed-threshold = <1000>;
+        speed-max = <4000>;
     };
 
     // センサーの X/Y は trackball_matrix が止めて、補正後の値を trackball_matrix_listener に
@@ -59,12 +77,13 @@
     };
 
     // 補正後の X/Y でカーソルを動かす。間隔をまとめるのは補正の後
-    // (前にすると、trackball_matrix が組にして待つ X と Y がずれる)
+    // (前にすると、trackball_matrix が組にして待つ X と Y がずれる)。
+    // 加速は補正後の移動量で速さを測り、センサーの報告間隔 (8ms) のまま測るため、間隔をまとめる前に置く
     trackball_matrix_listener {
         status = "okay";
         compatible = "zmk,input-listener";
         device = <&trackball_matrix>;
-        input-processors = <&trackball_rate_limit 15>, <&zip_temp_layer 8 10000>;
+        input-processors = <&trackball_accel>, <&trackball_rate_limit 15>, <&zip_temp_layer 8 10000>;
     };
 };
 
