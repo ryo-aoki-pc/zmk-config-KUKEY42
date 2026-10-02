@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - 'config/KUKEY42.keymap'
+      - 'config/KUKEY42.json'
       - 'tools/keymap-docgen'
       - '.gitmodules'
       - '.github/workflows/keymap-docs.yml'
