@@ -53,7 +53,8 @@
     };
 
     // センサーの X/Y は trackball_matrix が止めて、補正後の値を trackball_matrix_listener に
-    // 出し直す。こちらに残るのはスクロール (WHEEL / HWHEEL) だけ
+    // 出し直す。こちらに残るのはスクロール (WHEEL / HWHEEL) だけ。スクロールは AML 中に D / K を
+    // 押したときだけなので、ここは aml_threshold を通さず zip_temp_layer で AML を延ばす
     trackball_listener {
         status = "okay";
         compatible = "zmk,input-listener";
@@ -76,14 +77,28 @@
         limit-ble-only;
     };
 
+    // AML の発動条件 (zmk-input-processor-aml-threshold)。LisM と同じ値。リスナーで zip_temp_layer の
+    // 代わりに使い、キー入力の振動などでボールがわずかに動いても AML (MOUS) にしない。止まっていた状態から
+    // 動いた量 (X と Y それぞれ向き付きで足すので、行ったり来たりする振動は打ち消し合う) の大きさが
+    // threshold (加速の後の値 = カーソルの移動量) に達したら zip_temp_layer に渡す。キーを押した・離したあと
+    // require-prior-idle-ms (KUKEY42.keymap の zip_temp_layer の値) の間も渡さない。
+    // まだ振動で AML になるなら threshold を上げ、少し動かしただけでは AML にならないなら下げる
+    aml_threshold: aml_threshold {
+        compatible = "zmk,input-processor-aml-threshold";
+        #input-processor-cells = <2>;
+        temp-layer = <&zip_temp_layer>;
+        threshold = <10>;
+    };
+
     // 補正後の X/Y でカーソルを動かす。間隔をまとめるのは補正の後
     // (前にすると、trackball_matrix が組にして待つ X と Y がずれる)。
-    // 加速は補正後の移動量で速さを測り、センサーの報告間隔 (8ms) のまま測るため、間隔をまとめる前に置く
+    // 加速は補正後の移動量で速さを測り、センサーの報告間隔 (8ms) のまま測るため、間隔をまとめる前に置く。
+    // AML は aml_threshold を通し、わずかな動きでは発動しない
     trackball_matrix_listener {
         status = "okay";
         compatible = "zmk,input-listener";
         device = <&trackball_matrix>;
-        input-processors = <&trackball_accel>, <&trackball_rate_limit 15>, <&zip_temp_layer 8 10000>;
+        input-processors = <&trackball_accel>, <&trackball_rate_limit 15>, <&aml_threshold 8 10000>;
     };
 };
 
