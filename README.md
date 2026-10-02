@@ -22,7 +22,10 @@ https://htmlpreview.github.io/?https://github.com/ryo-aoki-pc/zmk-config-KUKEY42
 | `KUKEY42_left_peripheral.uf2` | 左側 ペリフェラル |
 | `KUKEY42_right_central.uf2` | 右側 セントラル |
 | `KUKEY42_right_central_studio.uf2` | 右側 セントラル (ZMK Studio 対応) |
+| `KUKEY42_right_central_logging.uf2` | 右側 セントラル (ログ版) |
 | `settings_reset-seeeduino_xiao_ble-zmk.uf2` | 設定リセット用 |
+
+`_logging` 版は、USB の COM ポートにデバッグログ (`zmk-usb-logging`) を出すセントラルです。ZMK Studio は入っていません。[zmk-config-keyboards](https://github.com/ryo-aoki-pc/zmk-config-keyboards) の `tools/keyboard-check.cmd` の「レイヤーの動きを見る」で、押したキーのレイヤーの遷移と解決を表示するのに使います。調べ終わったら通常版に戻してください。ローカルビルドでは Studio 版と同じく `make` / `make all` では作らず、`make all_studio_p` / `make all_studio` で作ります。
 
 ## ローカルビルド手順
 
