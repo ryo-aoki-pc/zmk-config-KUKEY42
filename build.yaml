@@ -16,6 +16,15 @@ include:
     snippet: studio-rpc-usb-uart
     cmake-args: -DCONFIG_ZMK_STUDIO=y -DCONFIG_ZMK_STUDIO_LOCKING=n -DCONFIG_ZMK_SPLIT_ROLE_CENTRAL=y
 
+  # ログ版 (USB の COM ポートにデバッグログを出す。Studio は入らない)。zmk-config-keyboards の
+  # tools/keyboard-check.cmd の「レイヤーの動きを見る」で、押したキーのレイヤーの遷移と解決を表示するのに使う。
+  # ボールを動かすと入力プロセッサのログが増えるので、ログのバッファを大きくする
+  - board: seeeduino_xiao_ble
+    shield: KUKEY42_R rgbled_adapter
+    artifact-name: KUKEY42_right_central_logging
+    snippet: zmk-usb-logging
+    cmake-args: -DCONFIG_ZMK_SPLIT_ROLE_CENTRAL=y -DCONFIG_LOG_BUFFER_SIZE=32768
+
   # Reset
   - board: seeeduino_xiao_ble
     shield: settings_reset
