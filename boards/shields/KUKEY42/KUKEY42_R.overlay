@@ -17,26 +17,6 @@
 };
 
 / {
-    // ボールを回したときの楕円 (縦横比と傾き) を真円に近づける補正。
-    //   X' = (m11 * X + m12 * Y) / divisor
-    //   Y' = (m21 * X + m22 * Y) / divisor
-    // 軸ごとの倍率では傾きが取れないため、X と Y を混ぜる 2x2 行列にしている
-    // (src/input_processor_xy_matrix.c)。値はトラックボール計測ページで出したものを入れる。
-    // 経緯 (前のファーム X 1 倍 / Y 2 倍は「＼」に長かった):
-    //   <1465 (-2252) (-1193) 3200> → 「／」に長い (補正がかかりすぎ)
-    //   <1278 (-1662) (-864) 2688>  → まだ「／」
-    //   <1209 (-1400) (-716) 2483>  → まだ「／」(計測で縦横比 2.17)
-    //   → その計測で計測ページが出した値
-    // 経緯の値と matrix は CPI 1000・divisor 1000 のときのもの。CPI を 2000 に上げたので、
-    // divisor を 2000 にして補正の形と速さを保っている (縦は約 2 倍していたため 2 ずつ動いていたが、
-    // 1 ずつ細かく動くようになる)
-    trackball_matrix: trackball_matrix {
-        compatible = "zmk,input-processor-xy-matrix";
-        #input-processor-cells = <0>;
-        matrix = <995 (-497) (-305) 2163>;
-        divisor = <2000>;
-    };
-
     // カーソルの加速 (zmk-input-processor-xy-accel)。LisM と同じ値。ボールを転がす速さ (カウント/秒) に
     // 応じて移動量に倍率 (1000 = 等倍) を掛ける。速さ 0 で min-factor、speed-threshold で等倍、
     // speed-max 以上で max-factor になり、その間は直線で補間する。ゆっくり動かしたときは
@@ -50,16 +30,6 @@
         max-factor = <1300>;
         speed-threshold = <1000>;
         speed-max = <4000>;
-    };
-
-    // センサーの X/Y は trackball_matrix が止めて、補正後の値を trackball_matrix_listener に
-    // 出し直す。こちらに残るのはスクロール (WHEEL / HWHEEL) だけ。スクロールは AML 中に D / K を
-    // 押したときだけなので、ここは aml_threshold を通さず zip_temp_layer で AML を延ばす
-    trackball_listener {
-        status = "okay";
-        compatible = "zmk,input-listener";
-        device = <&trackball>;
-        input-processors = <&trackball_matrix>, <&zip_temp_layer 8 10000>;
     };
 
     // BLE で送るカーソルのレポートを、指定した ms に 1 回までにまとめる (USB 接続中は素通し)。
@@ -90,15 +60,23 @@
         threshold = <10>;
     };
 
-    // 補正後の X/Y でカーソルを動かす。間隔をまとめるのは補正の後
-    // (前にすると、trackball_matrix が組にして待つ X と Y がずれる)。
+    // 楕円の補正: ボールを円を描くように回したときに、カーソルが楕円ではなく円を描くよう、X と Y に
+    // 別々の倍率を掛ける (傾きは補正しない)。値は zmk-config-keyboards の tools/keyboard-check.cmd
+    // (メニュー 4「トラックボールの正規化」) で測って入れる。今の値はこの 2 つに掛けて出すので、測り直したら置き換える。
+    // 1/2 と 13/12 は、前に使っていた 2x2 行列 <995 -497 -305 2163> / 2000 の対角 (X 0.50 / Y 1.08) に近い値。
     // 加速は補正後の移動量で速さを測り、センサーの報告間隔 (8ms) のまま測るため、間隔をまとめる前に置く。
-    // AML は aml_threshold を通し、わずかな動きでは発動しない
-    trackball_matrix_listener {
+    // AML は aml_threshold を通し、わずかな動きでは発動しない。スクロール (ドライバの scroll-layers の
+    // WHEEL / HWHEEL) は aml_threshold がそのまま zip_temp_layer に渡すので、スクロール中も AML が延びる
+    trackball_listener {
         status = "okay";
         compatible = "zmk,input-listener";
-        device = <&trackball_matrix>;
-        input-processors = <&trackball_accel>, <&trackball_rate_limit 15>, <&aml_threshold 8 10000>;
+        device = <&trackball>;
+        input-processors =
+            <&zip_x_scaler 1 2>,
+            <&zip_y_scaler 13 12>,
+            <&trackball_accel>,
+            <&trackball_rate_limit 15>,
+            <&aml_threshold 8 10000>;   // 8 = MOUS (マウス移動レイヤーを自動有効化。わずかな動きでは発動しない)
     };
 };
 
