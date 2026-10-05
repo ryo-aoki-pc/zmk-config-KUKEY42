@@ -79,7 +79,6 @@
             <&aml_threshold 8 10000>;   // 8 = MOUS (マウス移動レイヤーを自動有効化。わずかな動きでは発動しない)
     };
 };
-};
 
 &pinctrl {
     spi0_default: spi0_default {
