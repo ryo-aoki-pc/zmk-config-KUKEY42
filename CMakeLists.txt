@@ -1,7 +1,3 @@
-if(CONFIG_ZMK_INPUT_PROCESSOR_XY_MATRIX)
-    target_sources(app PRIVATE src/input_processor_xy_matrix.c)
-endif()
-
 target_sources_ifdef(CONFIG_ZMK_USB_BOOTMAGIC app PRIVATE src/usb_bootmagic.c)
 
 if(CONFIG_DT_HAS_ZMK_USB_BOOTMAGIC_ENABLED AND NOT CONFIG_ZMK_USB_BOOTMAGIC)
