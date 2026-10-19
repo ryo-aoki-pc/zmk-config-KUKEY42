@@ -46,6 +46,11 @@ config ZMK_SPLIT_BLE_FIX_RECOVERY_TIMEOUT_MS
     default 5000
     depends on ZMK_SPLIT_BLE_FIX_RECOVERY
 
+config ZMK_SPLIT_BLE_FIX_RECOVERY_STACK_SIZE
+    int "Stack size of the work queue that resumes interrupted discovery"
+    default 2048
+    depends on ZMK_SPLIT_BLE_FIX_RECOVERY
+
 config ZMK_SPLIT_BLE_FIX_BATTERY_SOURCE
     bool "Drop peripheral events with an invalid source (host disconnects)"
     default y

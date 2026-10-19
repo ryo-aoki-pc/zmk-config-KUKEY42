@@ -122,6 +122,8 @@ struct link_state {
     // 位置の購読を確かめた
     bool position_ok;
     uint8_t resumes;
+    // 接続・切断のたびに増やす。待っている間に切断・再接続したかを見分ける (conn のポインタは使い回される)
+    uint32_t generation;
     const char *failure;
     struct k_work_delayable resume_work;
     struct k_work_delayable check_work;
@@ -129,6 +131,17 @@ struct link_state {
 
 static struct link_state links[CONFIG_ZMK_SPLIT_BLE_CENTRAL_PERIPHERALS];
 static uint8_t reconnects;
+
+// 探索の続きは専用のワークキューで探し直す。ATT の受信スレッドの外からの bt_gatt_discover は、
+// 要求の領域が空くまで最大 30 秒 (BT_ATT_TIMEOUT) 待つので、システムのワークキュー (BT の送信完了や
+// check_work も動く) を止めないようにする。協調スレッドなので、状態を触る途中で割り込まれない
+K_THREAD_STACK_DEFINE(resume_queue_stack, CONFIG_ZMK_SPLIT_BLE_FIX_RECOVERY_STACK_SIZE);
+static struct k_work_q resume_queue;
+
+static void schedule_resume(struct link_state *link) {
+    link->resumes++;
+    k_work_reschedule_for_queue(&resume_queue, &link->resume_work, K_MSEC(RESUME_DELAY_MS));
+}
 
 // ZMK の split_central_chrc_discovery_func (static なので、最初の探索で覚える)
 static bt_gatt_discover_func_t zmk_chrc_func;
@@ -218,22 +231,26 @@ static void resume_work_cb(struct k_work *work) {
         return;
     }
 
+    // 待っている間に切断されても conn を放されないように、参照を持っておく
+    struct bt_conn *conn = bt_conn_ref(link->conn);
+    struct bt_gatt_discover_params *params = link->chrc_params;
+    uint32_t generation = link->generation;
+
     LOG_INF("split BLE fix: resuming the characteristic discovery at handle 0x%04x (%d/%d)",
-            link->chrc_params->start_handle, link->resumes, RESUME_MAX);
+            params->start_handle, link->resumes, RESUME_MAX);
 
-    int err = __real_bt_gatt_discover(link->conn, link->chrc_params);
-    if (err == 0) {
-        return;
+    int err = __real_bt_gatt_discover(conn, params);
+
+    if (err < 0 && link->generation == generation) {
+        if (link->resumes < RESUME_MAX) {
+            schedule_resume(link);
+        } else {
+            LOG_WRN("split BLE fix: could not resume the characteristic discovery (%d)", err);
+            finish_discovery(link, conn, params);
+        }
     }
 
-    if (link->resumes < RESUME_MAX) {
-        link->resumes++;
-        k_work_reschedule(&link->resume_work, K_MSEC(RESUME_DELAY_MS));
-        return;
-    }
-
-    LOG_WRN("split BLE fix: could not resume the characteristic discovery (%d)", err);
-    finish_discovery(link, link->conn, link->chrc_params);
+    bt_conn_unref(conn);
 }
 
 // ZMK のキャラクタリスティックの探索のコールバックの代わりに呼ばれ、ZMK に中継する
@@ -256,8 +273,7 @@ static uint8_t chrc_discovery_relay(struct bt_conn *conn, const struct bt_gatt_a
     // 打ち切られたかもしれないので、少し待って続きから探し直す
     if (link != NULL && link->conn != NULL && params->start_handle <= params->end_handle &&
         link->resumes < RESUME_MAX) {
-        link->resumes++;
-        k_work_reschedule(&link->resume_work, K_MSEC(RESUME_DELAY_MS));
+        schedule_resume(link);
         return BT_GATT_ITER_STOP;
     }
 
@@ -283,8 +299,7 @@ int __wrap_bt_gatt_discover(struct bt_conn *conn, struct bt_gatt_discover_params
 
     if (err < 0 && link != NULL) {
         // ZMK はエラーを記録するだけなので、こちらで探し直す
-        link->resumes++;
-        k_work_reschedule(&link->resume_work, K_MSEC(RESUME_DELAY_MS));
+        schedule_resume(link);
     }
 
     return err;
@@ -319,6 +334,7 @@ static void recovery_connected(struct bt_conn *conn, uint8_t err) {
     }
 
     link->conn = bt_conn_ref(conn);
+    link->generation++;
     link->chrc_params = NULL;
     link->position_handle = 0;
     link->position_ok = false;
@@ -349,6 +365,7 @@ static void recovery_disconnected(struct bt_conn *conn, uint8_t reason) {
     bt_conn_unref(link->conn);
     link->conn = NULL;
     link->chrc_params = NULL;
+    link->generation++;
 
     // こちらから切ったのでなければ (左手側の電源を切った、離れたなど)、やり直しの回数を数え直す
     if (reason != BT_HCI_ERR_LOCALHOST_TERM_CONN) {
@@ -364,6 +381,13 @@ BT_CONN_CB_DEFINE(split_ble_fix_recovery) = {
 };
 
 static int recovery_init(void) {
+    static const struct k_work_queue_config resume_queue_config = {.name = "split_ble_fix"};
+
+    k_work_queue_init(&resume_queue);
+    k_work_queue_start(&resume_queue, resume_queue_stack,
+                       K_THREAD_STACK_SIZEOF(resume_queue_stack),
+                       K_PRIO_COOP(CONFIG_NUM_COOP_PRIORITIES - 1), &resume_queue_config);
+
     for (size_t i = 0; i < ARRAY_SIZE(links); i++) {
         k_work_init_delayable(&links[i].resume_work, resume_work_cb);
         k_work_init_delayable(&links[i].check_work, check_work_cb);
