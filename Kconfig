@@ -2,3 +2,63 @@ config ZMK_USB_BOOTMAGIC
     bool "Reboot into the bootloader when USB is connected while a key is held"
     default y
     depends on DT_HAS_ZMK_USB_BOOTMAGIC_ENABLED && USB_DEVICE_STACK
+
+# ZMK v0.3.0 の分割 BLE の不具合の回避 (src/split_ble_fix.c)。ZMK を上げるときは、上流で直ったものを外す
+menuconfig ZMK_SPLIT_BLE_FIX
+    bool "Work around split BLE issues of ZMK v0.3.0"
+    default y
+    depends on ZMK_SPLIT_BLE
+
+if ZMK_SPLIT_BLE_FIX
+
+config ZMK_SPLIT_BLE_FIX_SCAN
+    bool "Scan for disconnected peripherals with a low duty cycle"
+    default y
+    depends on ZMK_SPLIT_ROLE_CENTRAL
+    help
+      ZMK scans 30 ms of every 60 ms while a peripheral is disconnected,
+      which takes radio time from the host connection.
+
+config ZMK_SPLIT_BLE_FIX_SCAN_INTERVAL
+    int "Scan interval while a peripheral is disconnected (0.625 ms units)"
+    default 512
+    range 4 16384
+    depends on ZMK_SPLIT_BLE_FIX_SCAN
+
+config ZMK_SPLIT_BLE_FIX_SCAN_WINDOW
+    int "Scan window while a peripheral is disconnected (0.625 ms units)"
+    default 24
+    range 4 16384
+    depends on ZMK_SPLIT_BLE_FIX_SCAN
+
+config ZMK_SPLIT_BLE_FIX_SUBSCRIBE
+    bool "Give each split subscription its own CCC discovery parameters"
+    default y
+    depends on ZMK_SPLIT_ROLE_CENTRAL && BT_GATT_AUTO_DISCOVER_CCC
+
+config ZMK_SPLIT_BLE_FIX_RECOVERY
+    bool "Resume interrupted discovery and reconnect peripherals without key subscription"
+    default y
+    depends on ZMK_SPLIT_ROLE_CENTRAL
+
+config ZMK_SPLIT_BLE_FIX_RECOVERY_TIMEOUT_MS
+    int "Time after connecting or encrypting until the key subscription must be confirmed (ms)"
+    default 5000
+    depends on ZMK_SPLIT_BLE_FIX_RECOVERY
+
+config ZMK_SPLIT_BLE_FIX_BATTERY_SOURCE
+    bool "Drop peripheral events with an invalid source (host disconnects)"
+    default y
+    depends on ZMK_SPLIT_ROLE_CENTRAL && ZMK_SPLIT_BLE_CENTRAL_BATTERY_LEVEL_FETCHING
+
+config ZMK_SPLIT_BLE_FIX_ADV_RETRY
+    bool "Retry advertising to the central when it fails to start"
+    default y
+    depends on !ZMK_SPLIT_ROLE_CENTRAL
+
+config ZMK_SPLIT_BLE_FIX_ADV_RETRY_MS
+    int "Advertising retry interval (ms)"
+    default 1000
+    depends on ZMK_SPLIT_BLE_FIX_ADV_RETRY
+
+endif # ZMK_SPLIT_BLE_FIX

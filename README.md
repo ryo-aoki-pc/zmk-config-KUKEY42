@@ -27,6 +27,19 @@ https://htmlpreview.github.io/?https://github.com/ryo-aoki-pc/zmk-config-KUKEY42
 
 `_logging` 版は、USB の COM ポートにデバッグログ (`zmk-usb-logging`) を出すセントラルです。ZMK Studio は入っていません。[zmk-config-keyboards](https://github.com/ryo-aoki-pc/zmk-config-keyboards) の `tools/keyboard-check.cmd` の「レイヤーの動きを見る」で、押したキーのレイヤーの遷移と解決を表示するのに使います。ログを出すとスレッドのスタックの使用量が増えるので、ログ版だけスタックを大きくし、スレッドごとのスタックの最大使用量を 30 秒ごとにログに出します (`<inf> thread_analyzer:` の行。設定は `build.yaml`)。調べ終わったら通常版に戻してください。ローカルビルドでは Studio 版と同じく `make` / `make all` では作らず、`make all_studio_p` / `make all_studio` で作ります。
 
+## 分割 BLE の不具合の回避 (`src/split_ble_fix.c`)
+
+ZMK v0.3.0 の分割 BLE には、次の症状の原因になる不具合があります。ZMK を変えずに、リンカの `--wrap` で ZMK の呼び出しに割り込んで回避しています (`CMakeLists.txt`)。
+
+| 症状 | 原因 | 回避 (`CONFIG_ZMK_SPLIT_BLE_FIX_*`) |
+| --- | --- | --- |
+| 右手側だけがつながっているとき、カーソルの動きが粗い | 左手側が切れている間、右手側が 60ms ごとに 30ms (50%) スキャンし続け、PC との送信の機会を奪う | `SCAN`: 320ms ごとに 15ms にする |
+| 左手側がつながっているのに、キーが届かない (左手側の電源を入れ直すと直る) | 再接続のときの GATT の購読の上書き ([zmkfirmware/zmk#3156](https://github.com/zmkfirmware/zmk/issues/3156))、バッファ不足での探索の打ち切り | `SUBSCRIBE`: 購読ごとに別の領域を使う。`RECOVERY`: 探索の続きを探し直し、つながって (暗号化が済んで) から 5 秒のうちにキーの購読を確かめられなければ接続をやり直す |
+| PC との切断の後におかしくなる | 電池のイベントを範囲外の番号 (234) で配列に書き込む ([zmkfirmware/zmk#3522](https://github.com/zmkfirmware/zmk/issues/3522)) | `BATTERY_SOURCE`: 範囲外の番号のイベントを捨てる |
+| 左手側が切れたあと、電源を入れ直すまでつながらない | 切断の直後に広告の開始に失敗しても、ZMK は再試行しない | `ADV_RETRY` (左手側): 1 秒ごとに再試行する |
+
+回避が働くと、ログ版のセントラルが `split BLE fix:` で始まる行をログに出します。左右とも書き込み直してください (`ADV_RETRY` は左手側、ほかは右手側に入ります)。ZMK を上げるときは、上流で直ったものを外します。
+
 ## ローカルビルド手順
 
 GitHub Actions でのビルドは毎回 2〜3 分かかりますが、ローカル環境では 40 秒〜1 分で完了します (PC スペックによって前後します)。
