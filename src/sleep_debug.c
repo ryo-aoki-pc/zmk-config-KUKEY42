@@ -20,6 +20,8 @@
 #include <zephyr/sys/poweroff.h>
 #include <zephyr/logging/log.h>
 
+#include <zephyr/drivers/gpio.h>
+
 #include <soc.h>
 
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
@@ -89,9 +91,35 @@ int __wrap_zmk_pm_suspend_devices(void) {
 
 FUNC_NORETURN void __real_sys_poweroff(void);
 
+// 起きるための仕掛けを、電源を切る直前に掛け直す (修正の候補)。col2row なので、列 (出力) をすべて 1 にし、
+// 行 (入力) をレベル割り込み (nRF では SENSE) にする。キーを押すと行が 1 になり、System OFF から起きる
+#define KSCAN_NODE DT_NODELABEL(kscan0)
+#define GPIO_SPEC_AND_COMMA(node, prop, idx) GPIO_DT_SPEC_GET_BY_IDX(node, prop, idx),
+static const struct gpio_dt_spec wake_rows[] = {
+    DT_FOREACH_PROP_ELEM(KSCAN_NODE, row_gpios, GPIO_SPEC_AND_COMMA)};
+static const struct gpio_dt_spec wake_cols[] = {
+    DT_FOREACH_PROP_ELEM(KSCAN_NODE, col_gpios, GPIO_SPEC_AND_COMMA)};
+
+static void arm_wakeup(void) {
+    for (size_t i = 0; i < ARRAY_SIZE(wake_cols); i++) {
+        int err = gpio_pin_set_dt(&wake_cols[i], 1);
+        if (err) {
+            LOG_ERR("sleep debug: set col %u failed (%d)", (unsigned int)i, err);
+        }
+    }
+    for (size_t i = 0; i < ARRAY_SIZE(wake_rows); i++) {
+        int err = gpio_pin_interrupt_configure_dt(&wake_rows[i], GPIO_INT_LEVEL_ACTIVE);
+        if (err) {
+            LOG_ERR("sleep debug: row %u interrupt failed (%d)", (unsigned int)i, err);
+        }
+    }
+}
+
 FUNC_NORETURN void __wrap_sys_poweroff(void) {
     LOG_INF("sleep debug: sys_poweroff");
-    dump_gpio("poweroff");
+    dump_gpio("poweroff before arming");
+    arm_wakeup();
+    dump_gpio("poweroff armed");
     k_msleep(1000);
     __real_sys_poweroff();
 }
@@ -146,10 +174,35 @@ static void sample_matrix(void) {
     }
 }
 
+// 20ms ごとに行の SENSE と列の出力を見て、変わったときにログに出す (キー待ちかどうかが変わった時刻)
+static uint32_t matrix_state(void) {
+    uint32_t state = 0;
+    for (size_t i = 0; i < 10; i++) {
+        const struct debug_pin *p = &debug_pins[i];
+        NRF_GPIO_Type *port = p->port ? NRF_P1 : NRF_P0;
+        if (i < 4) {
+            state |= ((port->PIN_CNF[p->pin] >> 16) & 3) << (i * 2);
+        } else {
+            state |= ((port->OUT >> p->pin) & 1) << (8 + i - 4);
+        }
+    }
+    return state;
+}
+
 static void sampler_thread(void *a, void *b, void *c) {
+    uint32_t last = UINT32_MAX;
+    uint32_t ticks = 0;
     while (true) {
-        k_msleep(5000);
-        sample_matrix();
+        k_msleep(20);
+        uint32_t state = matrix_state();
+        if (state != last) {
+            LOG_INF("matrix state: row sense %u%u%u%u cols out 0x%02x", state & 3, (state >> 2) & 3,
+                    (state >> 4) & 3, (state >> 6) & 3, (state >> 8) & 0x3f);
+            last = state;
+        }
+        if (++ticks % 250 == 0) {
+            sample_matrix();
+        }
     }
 }
 
