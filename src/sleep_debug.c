@@ -22,8 +22,6 @@
 
 #include <soc.h>
 
-#include <zmk/usb.h>
-
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 
 struct debug_pin {
@@ -61,9 +59,9 @@ static void dump_gpio(const char *when) {
     LOG_INF("sleep debug %s: GPIOTE intenset 0x%08x", when, NRF_GPIOTE->INTENSET);
 }
 
-enum zmk_usb_conn_state __real_zmk_usb_get_conn_state(void);
-
-enum zmk_usb_conn_state __wrap_zmk_usb_get_conn_state(void) { return ZMK_USB_CONN_NONE; }
+// zmk/usb.h は zmk/keys.h を読み込み、soc.h のマクロとぶつかるので、enum zmk_usb_conn_state を int で受ける
+// (0 = ZMK_USB_CONN_NONE)
+int __wrap_zmk_usb_get_conn_state(void) { return 0; }
 
 int __real_zmk_pm_suspend_devices(void);
 
