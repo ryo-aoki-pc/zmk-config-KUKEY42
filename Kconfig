@@ -67,3 +67,8 @@ config ZMK_SPLIT_BLE_FIX_ADV_RETRY_MS
     depends on ZMK_SPLIT_BLE_FIX_ADV_RETRY
 
 endif # ZMK_SPLIT_BLE_FIX
+
+# 試験用 (マージしない): USB でつないだままスリープさせ、スリープ前後の様子をログに出す (src/sleep_debug.c)
+config ZMK_SLEEP_DEBUG
+    bool "Test only: sleep while on USB and log the wake configuration"
+    depends on ZMK_SLEEP
