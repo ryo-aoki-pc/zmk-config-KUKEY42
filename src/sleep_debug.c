@@ -96,6 +96,66 @@ FUNC_NORETURN void __wrap_sys_poweroff(void) {
     __real_sys_poweroff();
 }
 
+// 5 秒ごとに 50ms、ピンを細かく読む (システムのワークキューより低い優先度なので、キーマトリクスの走査は止めない)。
+// 列の出力が変わっていれば、キーマトリクスは割り込み待ちではなく走査 (ポーリング) を続けている。
+// 列が 1 のときに 1 だった行を、列ごとに出す (押されたと読めているキー)
+static void sample_matrix(void) {
+    uint32_t samples = 0, changes = 0;
+    uint32_t col_high = 0, row_high = 0;
+    uint32_t pair[6] = {0};
+    uint32_t last0 = NRF_P0->OUT, last1 = NRF_P1->OUT;
+    uint32_t start = k_cycle_get_32();
+    uint32_t span = k_ms_to_cyc_ceil32(50);
+
+    while (k_cycle_get_32() - start < span) {
+        uint32_t in0 = NRF_P0->IN, in1 = NRF_P1->IN, out0 = NRF_P0->OUT, out1 = NRF_P1->OUT;
+        samples++;
+        if (out0 != last0 || out1 != last1) {
+            changes++;
+            last0 = out0;
+            last1 = out1;
+        }
+
+        uint32_t rows = 0;
+        for (size_t r = 0; r < 4; r++) {
+            const struct debug_pin *p = &debug_pins[r];
+            if (((p->port ? in1 : in0) >> p->pin) & 1) {
+                rows |= BIT(r);
+            }
+        }
+        row_high |= rows;
+
+        for (size_t c = 0; c < 6; c++) {
+            const struct debug_pin *p = &debug_pins[4 + c];
+            if (((p->port ? out1 : out0) >> p->pin) & 1) {
+                col_high |= BIT(c);
+                pair[c] |= rows;
+            }
+        }
+    }
+
+    LOG_INF("matrix sample: %u samples, output changes %u, cols high 0x%02x, rows high 0x%02x, "
+            "row sense %u%u%u%u",
+            samples, changes, col_high, row_high, (NRF_P0->PIN_CNF[3] >> 16) & 3,
+            (NRF_P0->PIN_CNF[28] >> 16) & 3, (NRF_P0->PIN_CNF[29] >> 16) & 3,
+            (NRF_P1->PIN_CNF[11] >> 16) & 3);
+    for (size_t c = 0; c < 6; c++) {
+        if (pair[c]) {
+            LOG_INF("matrix sample: col%u high with rows 0x%x", (unsigned int)c, pair[c]);
+        }
+    }
+}
+
+static void sampler_thread(void *a, void *b, void *c) {
+    while (true) {
+        k_msleep(5000);
+        sample_matrix();
+    }
+}
+
+K_THREAD_DEFINE(sleep_debug_sampler, 1024, sampler_thread, NULL, NULL, NULL,
+                K_LOWEST_APPLICATION_THREAD_PRIO, 0, 0);
+
 static int sleep_debug_init(void) {
     LOG_INF("sleep debug: boot, RESETREAS 0x%08x", NRF_POWER->RESETREAS);
     return 0;
