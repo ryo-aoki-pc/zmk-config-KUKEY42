@@ -47,6 +47,22 @@ include:
       -DCONFIG_THREAD_ANALYZER_AUTO=y
       -DCONFIG_THREAD_ANALYZER_AUTO_INTERVAL=30
 
+  # 試験用 (マージしない): 左手側のログ版。USB でつないだままスリープし、スリープ前後の様子をログに出す
+  - board: seeeduino_xiao_ble
+    shield: KUKEY42_L rgbled_adapter
+    artifact-name: KUKEY42_left_peripheral_logging
+    snippet: zmk-usb-logging
+    cmake-args: >-
+      -DCONFIG_ZMK_SLEEP_DEBUG=y
+      -DCONFIG_LOG_BUFFER_SIZE=32768
+      -DCONFIG_INPUT_THREAD_STACK_SIZE=2048
+      -DCONFIG_ZMK_LOW_PRIORITY_THREAD_STACK_SIZE=2048
+      -DCONFIG_LOG_PROCESS_THREAD_STACK_SIZE=2048
+      -DCONFIG_MAIN_STACK_SIZE=2048
+      -DCONFIG_USB_WORKQUEUE_STACK_SIZE=2048
+      -DCONFIG_SYSTEM_WORKQUEUE_STACK_SIZE=3072
+      -DCONFIG_BT_RX_STACK_SIZE=3072
+
   # Reset
   - board: seeeduino_xiao_ble
     shield: settings_reset

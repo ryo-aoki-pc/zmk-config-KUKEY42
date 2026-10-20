@@ -28,3 +28,10 @@ endif()
 if(CONFIG_ZMK_SPLIT_BLE_FIX_ADV_RETRY)
     zephyr_link_libraries(-Wl,--wrap=bt_le_adv_start -Wl,--wrap=bt_le_adv_stop)
 endif()
+
+# 試験用 (マージしない): src/sleep_debug.c
+target_sources_ifdef(CONFIG_ZMK_SLEEP_DEBUG app PRIVATE src/sleep_debug.c)
+
+if(CONFIG_ZMK_SLEEP_DEBUG)
+    zephyr_link_libraries(-Wl,--wrap=zmk_usb_get_conn_state -Wl,--wrap=zmk_pm_suspend_devices -Wl,--wrap=sys_poweroff)
+endif()
