@@ -89,6 +89,14 @@ int __wrap_zmk_pm_suspend_devices(void) {
     return err;
 }
 
+// 行の割り込みが何回起きたか (キーマトリクスと同じピンに、数えるだけのコールバックを足す)
+static volatile uint32_t row_irqs;
+static struct gpio_callback row_cb0, row_cb1;
+
+static void row_irq_cb(const struct device *port, struct gpio_callback *cb, gpio_port_pins_t pins) {
+    row_irqs++;
+}
+
 FUNC_NORETURN void __real_sys_poweroff(void);
 
 // 起きるための仕掛けを、電源を切る直前に掛け直す (修正の候補)。col2row なので、列 (出力) をすべて 1 にし、
@@ -99,6 +107,38 @@ static const struct gpio_dt_spec wake_rows[] = {
     DT_FOREACH_PROP_ELEM(KSCAN_NODE, row_gpios, GPIO_SPEC_AND_COMMA)};
 static const struct gpio_dt_spec wake_cols[] = {
     DT_FOREACH_PROP_ELEM(KSCAN_NODE, col_gpios, GPIO_SPEC_AND_COMMA)};
+
+static uint32_t read_rows(void) {
+    uint32_t in0 = NRF_P0->IN, in1 = NRF_P1->IN, rows = 0;
+    for (size_t r = 0; r < 4; r++) {
+        const struct debug_pin *p = &debug_pins[r];
+        if (((p->port ? in1 : in0) >> p->pin) & 1) {
+            rows |= BIT(r);
+        }
+    }
+    return rows;
+}
+
+// キーを押していないのに行が 1 になるかを調べる。列をすべて 1 にしたときと、1 本ずつ 1 にしたときの行を出す
+static void probe_matrix(void) {
+    for (size_t i = 0; i < ARRAY_SIZE(wake_cols); i++) {
+        gpio_pin_set_dt(&wake_cols[i], 1);
+    }
+    k_busy_wait(100);
+    LOG_INF("sleep debug probe: all cols high -> rows 0x%x", read_rows());
+
+    for (size_t c = 0; c < ARRAY_SIZE(wake_cols); c++) {
+        for (size_t i = 0; i < ARRAY_SIZE(wake_cols); i++) {
+            gpio_pin_set_dt(&wake_cols[i], i == c ? 1 : 0);
+        }
+        k_busy_wait(100);
+        LOG_INF("sleep debug probe: col%u only high -> rows 0x%x", (unsigned int)c, read_rows());
+    }
+
+    for (size_t i = 0; i < ARRAY_SIZE(wake_cols); i++) {
+        gpio_pin_set_dt(&wake_cols[i], 0);
+    }
+}
 
 static void arm_wakeup(void) {
     for (size_t i = 0; i < ARRAY_SIZE(wake_cols); i++) {
@@ -118,7 +158,10 @@ static void arm_wakeup(void) {
 FUNC_NORETURN void __wrap_sys_poweroff(void) {
     LOG_INF("sleep debug: sys_poweroff");
     dump_gpio("poweroff before arming");
+    probe_matrix();
     arm_wakeup();
+    k_busy_wait(100);
+    LOG_INF("sleep debug: right after arming, row interrupts %u, rows 0x%x", row_irqs, read_rows());
     dump_gpio("poweroff armed");
     k_msleep(1000);
     __real_sys_poweroff();
@@ -162,6 +205,10 @@ static void sample_matrix(void) {
         }
     }
 
+    static uint32_t last_irqs;
+    uint32_t irqs = row_irqs;
+    LOG_INF("matrix sample: row interrupts +%u", irqs - last_irqs);
+    last_irqs = irqs;
     LOG_INF("matrix sample: %u samples, output changes %u, cols high 0x%02x, rows high 0x%02x, "
             "row sense %u%u%u%u",
             samples, changes, col_high, row_high, (NRF_P0->PIN_CNF[3] >> 16) & 3,
@@ -211,6 +258,11 @@ K_THREAD_DEFINE(sleep_debug_sampler, 1024, sampler_thread, NULL, NULL, NULL,
 
 static int sleep_debug_init(void) {
     LOG_INF("sleep debug: boot, RESETREAS 0x%08x", NRF_POWER->RESETREAS);
+
+    gpio_init_callback(&row_cb0, row_irq_cb, BIT(3) | BIT(28) | BIT(29));
+    gpio_add_callback(DEVICE_DT_GET(DT_NODELABEL(gpio0)), &row_cb0);
+    gpio_init_callback(&row_cb1, row_irq_cb, BIT(11));
+    gpio_add_callback(DEVICE_DT_GET(DT_NODELABEL(gpio1)), &row_cb1);
     return 0;
 }
 
